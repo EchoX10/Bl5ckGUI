@@ -1,105 +1,156 @@
-<div align="center">
+# Módulos — BL5CK GUI
 
-# 📦 Módulos - BL5CK GUI
-
-**Cada módulo é carregado em sequência pelo `Loader.lua`**
-
-</div>
+Documentação técnica dos módulos internos do projeto **BL5CK GUI**.
 
 ---
 
-## 📌 Sobre
+## 1. Visão Geral
 
-Esta pasta contém os **6 módulos** que compõem o painel BL5CK GUI. Cada um roda em sequência e compartilha dados através da tabela global `_G.BlackGUI`.
+Esta pasta contém os módulos responsáveis pela execução do painel. Cada módulo é carregado sequencialmente pelo `Loader.lua` e compartilha estado através da tabela global `_G.BlackGUI`.
 
-**⚠️ Ordem importa.** Se você mexer nos nomes dos arquivos, precisa atualizar o array `MODULOS` no `Loader.lua`.
-
----
-
-## 📁 Lista dos Módulos
-
-| # | Arquivo | Responsável por |
-|---|---------|-----------------|
-| 01 | `01-Config.lua` | Config global + Notificações + Key system + Missões |
-| 02 | `02-Core.lua` | F3X Wrapper + HD Admin + Helpers (acharParteReal, welds, etc.) |
-| 03 | `03-Jogador.lua` | Clone + Zumbi + Tool Hacker + Tool Invisible + Modo Tóxico + Armadilha + Acessório |
-| 04 | `04-Visual.lua` | Spam de Partículas + Partículas Server-Side + Texturizar + Colorir + Música |
-| 05 | `05-Mapa.lua` | Obby + NPC + Meteorito + Bandeira + Natural Disaster + Metero Áudio |
-| 06 | `06-GUI.lua` | Sistema de abas + Todos os botões do painel |
+A arquitetura é dividida por **domínio funcional**, de forma que cada arquivo possui responsabilidade única e bem definida, facilitando manutenção, testes e evolução independente.
 
 ---
 
-## 🔗 Dependências entre módulos
+## 2. Estrutura
+
+| Módulo | Arquivo | Responsabilidade |
+|--------|---------|------------------|
+| 01 | `01-Config.lua` | Configurações globais, sistema de notificações, autenticação por key, módulo de missões |
+| 02 | `02-Core.lua` | Integração F3X Wrapper, conexão HD Admin, funções utilitárias compartilhadas |
+| 03 | `03-Jogador.lua` | Funcionalidades relacionadas ao jogador: clone, zumbi, tools, modo tóxico, armadilha, acessório |
+| 04 | `04-Visual.lua` | Efeitos visuais: spam de partículas, partículas server-side, texturização, coloração, sistema de música |
+| 05 | `05-Mapa.lua` | Funcionalidades de mapa: obby, NPC, meteorito, bandeira, natural disaster, metero áudio |
+| 06 | `06-GUI.lua` | Interface principal, sistema de abas e vinculação de eventos |
+
+---
+
+## 3. Ordem de Execução
+
+A ordem de carregamento é **mandatória** e definida no array `MODULOS` do `Loader.lua`:
 
 ```
-01-Config.lua  ──┐
-                 ├─► 02-Core.lua ──┐
-                 │                  ├─► 03-Jogador.lua ──┐
-                 │                  ├─► 04-Visual.lua  ──┤
-                 │                  └─► 05-Mapa.lua    ──┼─► 06-GUI.lua
-                 │                                       │
-                 └───────────────────────────────────────┘
-                          (_G.BlackGUI)
+01-Config.lua
+    ↓
+02-Core.lua
+    ↓
+03-Jogador.lua
+04-Visual.lua
+05-Mapa.lua
+    ↓
+06-GUI.lua
 ```
 
-**Regras:**
-
-- `01-Config` **não depende de nada** — é o primeiro a rodar
-- `02-Core` usa `_G.BlackGUI` que o `01` criou
-- `03`, `04`, `05` usam funções do `02` (F3X, helpers, HD Admin)
-- `06-GUI` chama funções que o `03`, `04` e `05` registraram
+Módulos posteriores dependem das funções e variáveis expostas pelos anteriores. A alteração da ordem sem ajuste de dependências resultará em erro de runtime.
 
 ---
 
-## 🧩 Como os módulos se comunicam
+## 4. Arquitetura de Comunicação
 
-Todos compartilham a tabela `_G.BlackGUI`:
+A comunicação entre módulos ocorre exclusivamente através da tabela `_G.BlackGUI`, inicializada pelo `Loader.lua` antes da execução do primeiro módulo.
+
+### 4.1. Inicialização (Loader.lua)
 
 ```lua
+_G.BlackGUI = _G.BlackGUI or {}
 local BG = _G.BlackGUI
+
+BG.Players           = game:GetService("Players")
+BG.ReplicatedStorage = game:GetService("ReplicatedStorage")
+BG.SoundService      = game:GetService("SoundService")
+BG.TweenService      = game:GetService("TweenService")
+BG.UserInputService  = game:GetService("UserInputService")
+BG.RunService        = game:GetService("RunService")
+BG.CoreGui           = game:GetService("CoreGui")
+BG.plr               = BG.Players.LocalPlayer
+BG.playerGui         = BG.plr:WaitForChild("PlayerGui")
 ```
 
-O `Loader.lua` cria essa tabela com os serviços do Roblox (Players, TweenService, etc.) **antes** de rodar os módulos. Depois, cada módulo **adiciona** suas próprias funções e variáveis nela:
+### 4.2. Exposição de Funcionalidades
+
+Cada módulo registra suas funcionalidades públicas na tabela `BG`:
 
 ```lua
--- Exemplo no 03-Jogador.lua
+-- Módulo 03-Jogador.lua
 function BG.toggleZumbi(ativar)
-    -- ...
+    -- implementação
 end
+```
 
--- Exemplo no 06-GUI.lua
-criarToggle("Zumbi", function(e) BG.toggleZumbi(e) end, tab1)
+### 4.3. Consumo entre Módulos
+
+Módulos posteriores importam a referência local e utilizam as funções expostas:
+
+```lua
+-- Módulo 06-GUI.lua
+local BG = _G.BlackGUI
+
+criarToggle("Zumbi", function(estado)
+    BG.toggleZumbi(estado)
+end, tab1)
 ```
 
 ---
 
-## 🛠️ Como editar um módulo
+## 5. Convenções de Código
 
-### Editar pelo GitHub (mobile ou PC)
+### 5.1. Nomenclatura
 
-1. Abre o arquivo no GitHub
-2. Clica no ícone de **lápis** (edit)
-3. Faz a mudança
-4. Rola até o final
-5. Escreve uma mensagem em **Commit changes** tipo `fix: corrigido X`
-6. Clica em **Commit changes**
+| Elemento | Padrão | Exemplo |
+|----------|--------|---------|
+| Funções expostas globalmente | Prefixo `BG.` | `BG.toggleZumbi` |
+| Funções locais | camelCase minúsculo | `local function criarToggle()` |
+| Constantes de módulo | UPPER_SNAKE_CASE | `TEMPO_EXPIRACAO` |
+| Tabelas de configuração | UPPER_SNAKE_CASE | `MUSIC_PRESETS` |
 
-**Pronto.** Na próxima vez que alguém rodar o Loader, vai pegar a versão nova.
+### 5.2. Tratamento de Erros
 
-### Adicionar um novo módulo
+Chamadas que podem falhar devem ser envolvidas em `pcall` e reportadas via sistema de notificações:
 
-Se quiser criar um módulo `07-Meumodulo.lua`:
+```lua
+pcall(function()
+    seBTP:InvokeServer("CreateDecorations", {{Part = parte}})
+end)
+```
 
-1. Cria o arquivo na pasta
-2. Edita o `Loader.lua` e adiciona `"07-Meumodulo.lua"` no array `MODULOS`, **na posição correta**
-3. Commit nos dois arquivos
-4. Pronto
+Chamadas críticas devem notificar o usuário:
+
+```lua
+if not seBTP then
+    notifyErro("Building Tools+ não encontrada")
+    return
+end
+```
+
+### 5.3. Comunicação com Serviços
+
+- **HD Admin:** todos os comandos via `cmdHD(";comando")`
+- **F3X:** criação de partes via `F3X:CreatePart` seguida de sincronização server-side
+- **Notificações:** sempre via `notifySucesso`, `notifyErro` ou `notifyInfo`
+
+### 5.4. Restrições
+
+- Não utilizar `wait()` — utilizar `task.wait()` exclusivamente
+- Não declarar variáveis globais fora da tabela `BG`
+- Não modificar `_G.BlackGUI` após a inicialização (apenas adicionar novas chaves)
+- Não introduzir `task.wait()` prolongado no bloco de construção da GUI (módulo 06)
 
 ---
 
-## 🐛 Debug — quando algo quebra
+## 6. Adição de Novos Módulos
 
-O `Loader.lua` mostra qual módulo deu erro:
+Para adicionar um novo módulo ao projeto:
+
+1. Criar o arquivo na pasta `modules/` seguindo o padrão de nomenclatura (`NN-Nome.lua`)
+2. Registrar o módulo no array `MODULOS` do `Loader.lua`, na posição apropriada da cadeia de dependências
+3. Garantir que o módulo finalize com uma chamada de log: `print("[NomeModulo] Módulo carregado")`
+4. Testar em ambiente controlado antes de realizar o commit
+
+---
+
+## 7. Diagnóstico de Falhas
+
+O `Loader.lua` reporta o módulo e a linha exata em caso de falha:
 
 ```
 [1/6] 01-Config.lua
@@ -112,49 +163,47 @@ O `Loader.lua` mostra qual módulo deu erro:
 ❌ Sintaxe errada em 04-Visual.lua: linha 234: expected 'end' near '}'
 ```
 
-**Passos pra corrigir:**
+### 7.1. Procedimento de Correção
 
-1. Abre o arquivo que deu erro (`04-Visual.lua`)
-2. Vai até a linha que o erro indicou
-3. Corrige
-4. Commit
-5. Roda o Loader de novo
+1. Acessar o arquivo indicado
+2. Localizar a linha reportada
+3. Aplicar a correção
+4. Realizar commit
+5. Executar o Loader novamente para validar
 
----
+### 7.2. Erros Comuns
 
-## 📝 Convenções usadas
-
-- **Nomes de função globais** começam com `BG.` (ex: `BG.toggleZumbi`)
-- **Nomes de função locais** começam minúsculo (ex: `local function criarToggle()`)
-- **Notificações** são sempre chamadas via `BG.notifySucesso`, `BG.notifyErro` ou `BG.notifyInfo`
-- **Comandos HD Admin** sempre via `cmdHD(";comando")`
-- **Criação de partes server-side** sempre via `F3X:CreatePart` + `seBTP:InvokeServer("Sync...")`
-- **Todo `pcall` que pode falhar** tem `notifyInfo` ou `notifyErro` avisando
+| Mensagem | Causa | Solução |
+|----------|-------|---------|
+| `attempt to index nil value` | Módulo anterior não expôs a função esperada | Verificar ordem no `Loader.lua` |
+| `expected 'end' near ...` | Bloco de código não finalizado corretamente | Revisar linha reportada |
+| `attempt to call nil value` | Função chamada antes de ser definida | Mover definição para antes do uso |
+| `HttpGet failed` | URL inválida ou repositório inacessível | Verificar URL raw no GitHub |
 
 ---
 
-## 🚫 Coisas que NÃO fazer
+## 8. Versionamento
 
-- ❌ **Não remove o `_G.BlackGUI`** no meio dos módulos
-- ❌ **Não muda os nomes** dos arquivos sem atualizar o `Loader.lua`
-- ❌ **Não cria variáveis globais comuns** (ex: `local funcao_global = ...` sem `BG.`) — outros módulos não vão ver
-- ❌ **Não adiciona `task.wait()` longo** entre `criarBotao` no `06-GUI` — só trava a abertura do painel
-- ❌ **Não usa `wait()` antigo** — usa `task.wait()` sempre
+Alterações nos módulos devem seguir o padrão **Conventional Commits**:
+
+```
+feat: adicionado suporte a X
+fix: corrigido erro em Y
+docs: atualizada documentação de Z
+refactor: reorganizado módulo W
+```
 
 ---
 
-## 📋 Changelog dos módulos
+## 9. Referências
 
-### v1.0.0
-- ✅ 6 módulos criados
-- ✅ Sistema de notificações + key + missões
-- ✅ F3X + HD Admin integrados
-- ✅ Todas as features separadas por categoria
+- [README principal](../README.md)
+- [Loader.lua](../Loader.lua)
 
 ---
 
 <div align="center">
 
-**Volta pro repositório principal:** [README.md](../README.md)
+**BL5CK GUI** — Documentação interna de módulos
 
 </div>
