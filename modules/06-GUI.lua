@@ -247,6 +247,7 @@ local tab1 = adicionarAba("Jogador", 1)
 criarToggle("Clone Personagem + Arma", function(e)
     if e then BG.toggleClonePersonagem(true) else BG.toggleClonePersonagem(false) end
 end, tab1)
+criarToggle("Acessorio Flutuante", function(e) BG.toggleAcessorioFlutuante(e) end, tab1)
 criarToggle("Zumbi", function(e) BG.toggleZumbi(e) end, tab1)
 criarBotao("Tool Invisible", BG.botaoCriarToolInvisible, tab1)
 criarBotao("Tool Hacker", BG.botaoCriarToolHacker, tab1)
