@@ -48,10 +48,15 @@ function BG.botaoMeteorito()
     F3X:Unanchor(parte)
     task.spawn(function()
         local parado = 0
-        while parte and parte.Parent do
+        local tempoMax = 60
+        local t = 0
+        while parte and parte.Parent and t < tempoMax do
+            t = t + 0.1
             local vel = Vector3.new(0, 0, 0)
-            pcall(function() vel = parte.AssemblyLinearVelocity end)
-            if vel.Magnitude < 1 then
+            local y = 500
+            pcall(function() vel = parte.AssemblyLinearVelocity y = parte.Position.Y end)
+            -- Considera "aterrissado" se estiver lento OU já muito baixo
+            if vel.Magnitude < 1 or y < 10 then
                 parado = parado + 0.1
                 if parado > 0.5 then
                     local ponto = parte.Position
@@ -78,6 +83,26 @@ function BG.botaoMeteorito()
             end
             task.wait(0.1)
         end
+        -- Fallback: se o loop estourou o tempo sem explodir, força a explosão
+        if parte and parte.Parent then
+            local ponto = parte.Position
+            local bola = F3X:CreatePart("Ball", CFrame.new(ponto), workspace)
+            if bola then
+                F3X:Resize(bola, Vector3.new(10, 10, 10))
+                F3X:SetColor(bola, Color3.fromRGB(255, 0, 0))
+                F3X:SetTransparency(bola, 0.4)
+                F3X:Anchor(bola)
+                pcall(function() F3X:Remove(parte) end)
+                local tam = 10
+                while tam < 1500 and bola and bola.Parent do
+                    tam = tam + 50
+                    pcall(function() F3X:Resize(bola, Vector3.new(tam, tam, tam)) end)
+                    task.wait(0.05)
+                end
+                task.wait(1)
+                pcall(function() F3X:Remove(bola) end)
+            end
+        end
         notifySucesso("Meteorito concluido")
     end)
 end
@@ -86,32 +111,32 @@ end
 function BG.botaoConstruirMapaRapido()
     notifyInfo("Construindo mapa...")
 
-local MEU_BLUEPRINT = {
-  {n="Terrain", cf={0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(2044.00,252.00,2044.00), c=Color3.fromRGB(163,162,165), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-38.0000,63.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(99,49,255), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-38.0000,57.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(255,102,204), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-37.0000,59.5217,-29.7064,0.0000,-0.0000,-1.0000,-0.6428,-0.7661,-0.0000,-0.7661,0.6428,-0.0000}, s=Vector3.new(4.20,1.00,0.00), c=Color3.fromRGB(0,255,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-37.0000,60.4267,-32.6298,0.0000,0.0000,-1.0000,-0.7661,0.6428,-0.0000,0.6428,0.7661,0.0000}, s=Vector3.new(6.10,1.00,0.00), c=Color3.fromRGB(0,255,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-38.0000,58.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(255,249,145), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-38.0000,61.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(255,249,145), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-36.5020,60.1482,7.7553,0.0000,-0.0000,-1.0000,-0.6428,-0.7661,-0.0000,-0.7661,0.6428,-0.0000}, s=Vector3.new(4.20,1.00,0.00), c=Color3.fromRGB(0,255,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-36.5016,61.0531,4.8320,0.0000,0.0000,-1.0000,-0.7661,0.6428,-0.0000,0.6428,0.7661,0.0000}, s=Vector3.new(6.10,1.00,0.00), c=Color3.fromRGB(0,255,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-38.0000,60.0000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,2.00,2.00), c=Color3.fromRGB(255,255,255), m="Plastic", t=0.00, col=true, anc=true},
-  {n="SpawnLocation", cf={20.0000,0.5000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(12.00,1.00,12.00), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-38.0000,32.0000,-15.0000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(49.00,64.00,2.00), c=Color3.fromRGB(163,162,165), m="Plastic", t=1.00, col=true, anc=true, decals={{face="Decal", tex=139385026360175, transp=0.00}}},
-  {n="Part", cf={-38.0000,60.5279,6.1500,0.0000,0.0000,-1.0000,1.0000,0.0000,0.0000,0.0000,-1.0000,0.0000}, s=Vector3.new(6.63,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-37.9999,61.8684,8.7605,0.0000,0.0000,-1.0000,-1.0000,0.0000,0.0000,0.0000,1.0000,0.0000}, s=Vector3.new(4.09,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-37.9999,63.2090,4.8094,0.0000,0.0000,-1.0000,0.0000,-1.0000,-0.0000,-1.0000,0.0000,-0.0000}, s=Vector3.new(3.95,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-37.9999,57.8467,7.4905,0.0000,0.0000,-1.0000,0.0000,-1.0000,-0.0000,-1.0000,0.0000,-0.0000}, s=Vector3.new(3.95,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-38.0000,60.5279,6.1500,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(6.63,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-37.9999,59.1167,3.5394,0.0000,0.0000,-1.0000,-1.0000,0.0000,0.0000,0.0000,1.0000,0.0000}, s=Vector3.new(4.23,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="SpawnLocation", cf={-7.0000,0.5000,-28.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(12.00,1.00,12.00), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="SpawnLocation", cf={20.0000,0.5000,-28.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(12.00,1.00,12.00), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="SpawnLocation", cf={-7.0000,0.5000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(12.00,1.00,12.00), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={0.0000,-0.5000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(230.00,1.00,230.00), c=Color3.fromRGB(85,85,85), m="Asphalt", t=0.00, col=true, anc=true},
-  {n="Part", cf={-38.0000,62.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(44,141,255), m="Plastic", t=0.00, col=true, anc=true},
-  {n="Part", cf={-38.0000,56.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(183,70,190), m="Plastic", t=0.00, col=true, anc=true},
-}
+    local MEU_BLUEPRINT = {
+      {n="Terrain", cf={0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(2044.00,252.00,2044.00), c=Color3.fromRGB(163,162,165), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-38.0000,63.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(99,49,255), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-38.0000,57.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(255,102,204), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-37.0000,59.5217,-29.7064,0.0000,-0.0000,-1.0000,-0.6428,-0.7661,-0.0000,-0.7661,0.6428,-0.0000}, s=Vector3.new(4.20,1.00,0.00), c=Color3.fromRGB(0,255,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-37.0000,60.4267,-32.6298,0.0000,0.0000,-1.0000,-0.7661,0.6428,-0.0000,0.6428,0.7661,0.0000}, s=Vector3.new(6.10,1.00,0.00), c=Color3.fromRGB(0,255,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-38.0000,58.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(255,249,145), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-38.0000,61.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(255,249,145), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-36.5020,60.1482,7.7553,0.0000,-0.0000,-1.0000,-0.6428,-0.7661,-0.0000,-0.7661,0.6428,-0.0000}, s=Vector3.new(4.20,1.00,0.00), c=Color3.fromRGB(0,255,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-36.5016,61.0531,4.8320,0.0000,0.0000,-1.0000,-0.7661,0.6428,-0.0000,0.6428,0.7661,0.0000}, s=Vector3.new(6.10,1.00,0.00), c=Color3.fromRGB(0,255,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-38.0000,60.0000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,2.00,2.00), c=Color3.fromRGB(255,255,255), m="Plastic", t=0.00, col=true, anc=true},
+      {n="SpawnLocation", cf={20.0000,0.5000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(12.00,1.00,12.00), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-38.0000,32.0000,-15.0000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(49.00,64.00,2.00), c=Color3.fromRGB(163,162,165), m="Plastic", t=1.00, col=true, anc=true, decals={{face="Decal", tex=139385026360175, transp=0.00}}},
+      {n="Part", cf={-38.0000,60.5279,6.1500,0.0000,0.0000,-1.0000,1.0000,0.0000,0.0000,0.0000,-1.0000,0.0000}, s=Vector3.new(6.63,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-37.9999,61.8684,8.7605,0.0000,0.0000,-1.0000,-1.0000,0.0000,0.0000,0.0000,1.0000,0.0000}, s=Vector3.new(4.09,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-37.9999,63.2090,4.8094,0.0000,0.0000,-1.0000,0.0000,-1.0000,-0.0000,-1.0000,0.0000,-0.0000}, s=Vector3.new(3.95,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-37.9999,57.8467,7.4905,0.0000,0.0000,-1.0000,0.0000,-1.0000,-0.0000,-1.0000,0.0000,-0.0000}, s=Vector3.new(3.95,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-38.0000,60.5279,6.1500,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(6.63,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-37.9999,59.1167,3.5394,0.0000,0.0000,-1.0000,-1.0000,0.0000,0.0000,0.0000,1.0000,0.0000}, s=Vector3.new(4.23,1.41,2.82), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="SpawnLocation", cf={-7.0000,0.5000,-28.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(12.00,1.00,12.00), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="SpawnLocation", cf={20.0000,0.5000,-28.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(12.00,1.00,12.00), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="SpawnLocation", cf={-7.0000,0.5000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(12.00,1.00,12.00), c=Color3.fromRGB(0,0,0), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={0.0000,-0.5000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000}, s=Vector3.new(230.00,1.00,230.00), c=Color3.fromRGB(85,85,85), m="Asphalt", t=0.00, col=true, anc=true},
+      {n="Part", cf={-38.0000,62.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(44,141,255), m="Plastic", t=0.00, col=true, anc=true},
+      {n="Part", cf={-38.0000,56.5000,-31.5000,0.0000,0.0000,-1.0000,0.0000,1.0000,0.0000,1.0000,0.0000,0.0000}, s=Vector3.new(16.00,1.00,2.00), c=Color3.fromRGB(183,70,190), m="Plastic", t=0.00, col=true, anc=true},
+    }
 
     cmdHD(";punish all")
 
@@ -122,7 +147,7 @@ local MEU_BLUEPRINT = {
     end
 
     local criadas = {}
-    for i, d in ipairs(BLUEPRINT) do
+    for i, d in ipairs(MEU_BLUEPRINT) do
         local cf = CFrame.new(d.cf[1],d.cf[2],d.cf[3],d.cf[4],d.cf[5],d.cf[6],d.cf[7],d.cf[8],d.cf[9],d.cf[10],d.cf[11],d.cf[12])
         local p = F3X:CreatePart("Normal", cf, workspace)
         if p then table.insert(criadas, {parte = p, dados = d}) end
@@ -203,7 +228,7 @@ local function iniciarCaminhada()
             walkFrame = walkFrame + 1
             if walkFrame > 4 then walkFrame = 1 end
             local fases = {{0,0,0,0},{-30,30,30,-30},{0,0,0,0},{30,-30,-30,30}}
-                local fase = fases[walkFrame]
+            local fase = fases[walkFrame]
             animarGrupo(animationGroups.bracoEsq, fase[1])
             animarGrupo(animationGroups.bracoDir, fase[2])
             animarGrupo(animationGroups.pernaEsq, fase[3])
@@ -223,6 +248,12 @@ local function pararCaminhada()
 end
 
 local function deletarNPC()
+    -- Fecha o GUI sempre, mesmo se chamado externamente
+    if controlGui then
+        pcall(function() controlGui:Destroy() end)
+        controlGui = nil
+    end
+    pararCaminhada()
     if not npcPivot then return end
     for _, p in ipairs(npcParts) do
         if p and p.Parent then pcall(function() F3X:Remove(p) end) end
@@ -268,8 +299,9 @@ function BG.criarNPC()
         end
     end
 
-    local vel = 0.5
-    while true do
+    -- Desce o NPC até achar chão
+    local tentativas = 0
+    while tentativas < 200 do
         if not npcPivot then break end
         local pos = npcPivot.Position
         local rp = RaycastParams.new()
@@ -280,11 +312,18 @@ function BG.criarNPC()
             alturaOriginal = pos.Y
             break
         end
-        moverNPC("frente")
-        moverNPC("tras")
+        -- Desce de verdade
+        F3X:Move(npcPivot, CFrame.new(pos - Vector3.new(0, 0.5, 0)))
+        for parte, dados in pairs(partOffsets) do
+            local novaPosP = (pos - Vector3.new(0, 0.5, 0)) + dados.offset
+            local cf = parte.CFrame
+            F3X:Move(parte, CFrame.new(novaPosP) * (cf - cf.Position))
+        end
+        tentativas = tentativas + 1
         task.wait(0.05)
     end
 
+    -- Recalcula offsets e posições originais após o snap no chão
     for p, d in pairs(partOffsets) do
         d.offset = p.CFrame.Position - npcPivot.Position
         d.originalCF = p.CFrame
@@ -377,7 +416,6 @@ function BG.criarNPC()
     Instance.new("UICorner", fechar).CornerRadius = UDim.new(0, 6)
     fechar.MouseButton1Click:Connect(function()
         deletarNPC()
-        if controlGui then controlGui:Destroy() controlGui = nil end
     end)
 
     notifySucesso("NPC criado")
@@ -451,6 +489,8 @@ function BG.executarMeteroAudio()
         return
     end
     meteroRodando = true
+    -- Watchdog: destrava a flag após 4 minutos no pior caso
+    task.delay(240, function() meteroRodando = false end)
 
     local seBTP = getFork3XEndpoint()
     if not seBTP then notifyErro("Building Tools+ nao equipada") meteroRodando = false return end
@@ -506,8 +546,9 @@ function BG.executarMeteroAudio()
         tempo = tempo + 0.15
         if not parte or not parte.Parent then break end
         local vel = Vector3.new(0, 0, 0)
-        pcall(function() vel = parte.AssemblyLinearVelocity end)
-        if vel.Magnitude < 0.5 and parte.Position.Y < 50 then caiu = true end
+        local y = 500
+        pcall(function() vel = parte.AssemblyLinearVelocity y = parte.Position.Y end)
+        if (vel.Magnitude < 0.5 and y < 50) or y < 5 then caiu = true end
     end
 
     cmdHD(";music 138680390593747")
@@ -556,7 +597,7 @@ function BG.executarMeteroAudio()
         e.Touched:Connect(function(hit)
             local char = hit:FindFirstAncestorOfClass("Model")
             if char then
-                local p = Players:GetPlayerFromCharacter(char)
+                local p = Players and Players:GetPlayerFromCharacter(char)
                 if p and char:FindFirstChild("Humanoid") then
                     for _, part in ipairs(char:GetDescendants()) do
                         if part:IsA("BasePart") then
