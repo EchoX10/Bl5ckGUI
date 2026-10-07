@@ -202,7 +202,8 @@ local function iniciarCaminhada()
         while isWalking do
             walkFrame = walkFrame + 1
             if walkFrame > 4 then walkFrame = 1 end
-            local fase = {{0,0,0,0},{-30,30,30,-30},{0,0,0,0},{30,-30,-30,30}}[walkFrame]
+            local fases = {{0,0,0,0},{-30,30,30,-30},{0,0,0,0},{30,-30,-30,30}}
+                local fase = fases[walkFrame]
             animarGrupo(animationGroups.bracoEsq, fase[1])
             animarGrupo(animationGroups.bracoDir, fase[2])
             animarGrupo(animationGroups.pernaEsq, fase[3])
