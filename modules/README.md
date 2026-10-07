@@ -1,10 +1,10 @@
-# Módulos — BL5CK GUI
+# 📦 Módulos — BL5CK GUI
 
 Documentação técnica dos módulos internos do projeto **BL5CK GUI**.
 
 ---
 
-## 1. Visão Geral
+## 📌 Visão Geral
 
 Esta pasta contém os módulos responsáveis pela execução do painel. Cada módulo é carregado sequencialmente pelo `Loader.lua` e compartilha estado através da tabela global `_G.BlackGUI`.
 
@@ -12,22 +12,22 @@ A arquitetura é dividida por **domínio funcional**, de forma que cada arquivo 
 
 ---
 
-## 2. Estrutura
+## 🗂️ Estrutura dos Módulos
 
-| Módulo | Arquivo | Responsabilidade |
-|--------|---------|------------------|
-| 01 | `01-Config.lua` | Configurações globais, sistema de notificações, autenticação por key, módulo de missões |
-| 02 | `02-Core.lua` | Integração F3X Wrapper, conexão HD Admin, funções utilitárias compartilhadas |
-| 03 | `03-Jogador.lua` | Funcionalidades relacionadas ao jogador: clone, zumbi, tools, modo tóxico, armadilha, acessório |
-| 04 | `04-Visual.lua` | Efeitos visuais: spam de partículas, partículas server-side, texturização, coloração, sistema de música |
-| 05 | `05-Mapa.lua` | Funcionalidades de mapa: obby, NPC, meteorito, bandeira, natural disaster, metero áudio |
+| # | Arquivo | Responsabilidade |
+|---|---------|------------------|
+| 01 | `01-Config.lua` | Configurações globais, sistema de notificações, autenticação por key e módulo de missões |
+| 02 | `02-Core.lua` | Integração F3X Wrapper, conexão HD Admin e funções utilitárias compartilhadas |
+| 03 | `03-Jogador.lua` | Funcionalidades do jogador: clone, zumbi, tools, modo tóxico, armadilha e acessório flutuante |
+| 04 | `04-Visual.lua` | Efeitos visuais: spam de partículas, partículas server-side, texturização, coloração e sistema de música |
+| 05 | `05-Mapa.lua` | Funcionalidades de mapa: obby, NPC, meteorito, bandeira, natural disaster e metero áudio |
 | 06 | `06-GUI.lua` | Interface principal, sistema de abas e vinculação de eventos |
 
 ---
 
-## 3. Ordem de Execução
+## 🔄 Ordem de Execução
 
-A ordem de carregamento é **mandatória** e definida no array `MODULOS` do `Loader.lua`:
+A ordem de carregamento é **obrigatória** e definida no array `MODULOS` do `Loader.lua`:
 
 ```
 01-Config.lua
@@ -41,15 +41,15 @@ A ordem de carregamento é **mandatória** e definida no array `MODULOS` do `Loa
 06-GUI.lua
 ```
 
-Módulos posteriores dependem das funções e variáveis expostas pelos anteriores. A alteração da ordem sem ajuste de dependências resultará em erro de runtime.
+Módulos posteriores dependem das funções e variáveis expostas pelos anteriores. Alterar a ordem sem ajustar as dependências resultará em erro de runtime.
 
 ---
 
-## 4. Arquitetura de Comunicação
+## 🔗 Arquitetura de Comunicação
 
 A comunicação entre módulos ocorre exclusivamente através da tabela `_G.BlackGUI`, inicializada pelo `Loader.lua` antes da execução do primeiro módulo.
 
-### 4.1. Inicialização (Loader.lua)
+### Inicialização (Loader.lua)
 
 ```lua
 _G.BlackGUI = _G.BlackGUI or {}
@@ -66,7 +66,7 @@ BG.plr               = BG.Players.LocalPlayer
 BG.playerGui         = BG.plr:WaitForChild("PlayerGui")
 ```
 
-### 4.2. Exposição de Funcionalidades
+### Exposição de Funcionalidades
 
 Cada módulo registra suas funcionalidades públicas na tabela `BG`:
 
@@ -77,7 +77,7 @@ function BG.toggleZumbi(ativar)
 end
 ```
 
-### 4.3. Consumo entre Módulos
+### Consumo entre Módulos
 
 Módulos posteriores importam a referência local e utilizam as funções expostas:
 
@@ -92,9 +92,9 @@ end, tab1)
 
 ---
 
-## 5. Convenções de Código
+## 📝 Convenções de Código
 
-### 5.1. Nomenclatura
+### Nomenclatura
 
 | Elemento | Padrão | Exemplo |
 |----------|--------|---------|
@@ -103,9 +103,9 @@ end, tab1)
 | Constantes de módulo | UPPER_SNAKE_CASE | `TEMPO_EXPIRACAO` |
 | Tabelas de configuração | UPPER_SNAKE_CASE | `MUSIC_PRESETS` |
 
-### 5.2. Tratamento de Erros
+### Tratamento de Erros
 
-Chamadas que podem falhar devem ser envolvidas em `pcall` e reportadas via sistema de notificações:
+Chamadas que podem falhar devem ser envolvidas em `pcall`:
 
 ```lua
 pcall(function()
@@ -122,22 +122,22 @@ if not seBTP then
 end
 ```
 
-### 5.3. Comunicação com Serviços
+### Comunicação com Serviços
 
-- **HD Admin:** todos os comandos via `cmdHD(";comando")`
-- **F3X:** criação de partes via `F3X:CreatePart` seguida de sincronização server-side
-- **Notificações:** sempre via `notifySucesso`, `notifyErro` ou `notifyInfo`
+- 🎮 **HD Admin:** todos os comandos via `cmdHD(";comando")`
+- 🔨 **F3X:** criação de partes via `F3X:CreatePart` seguida de sincronização server-side
+- 🔔 **Notificações:** sempre via `notifySucesso`, `notifyErro` ou `notifyInfo`
 
-### 5.4. Restrições
+### Restrições
 
-- Não utilizar `wait()` — utilizar `task.wait()` exclusivamente
-- Não declarar variáveis globais fora da tabela `BG`
-- Não modificar `_G.BlackGUI` após a inicialização (apenas adicionar novas chaves)
-- Não introduzir `task.wait()` prolongado no bloco de construção da GUI (módulo 06)
+- ❌ Não utilizar `wait()` — utilizar `task.wait()` exclusivamente
+- ❌ Não declarar variáveis globais fora da tabela `BG`
+- ❌ Não modificar `_G.BlackGUI` após a inicialização (apenas adicionar novas chaves)
+- ❌ Não introduzir `task.wait()` prolongado na construção da GUI (módulo 06)
 
 ---
 
-## 6. Adição de Novos Módulos
+## ➕ Adição de Novos Módulos
 
 Para adicionar um novo módulo ao projeto:
 
@@ -148,7 +148,7 @@ Para adicionar um novo módulo ao projeto:
 
 ---
 
-## 7. Diagnóstico de Falhas
+## 🐛 Diagnóstico de Falhas
 
 O `Loader.lua` reporta o módulo e a linha exata em caso de falha:
 
@@ -163,7 +163,7 @@ O `Loader.lua` reporta o módulo e a linha exata em caso de falha:
 ❌ Sintaxe errada em 04-Visual.lua: linha 234: expected 'end' near '}'
 ```
 
-### 7.1. Procedimento de Correção
+### Procedimento de Correção
 
 1. Acessar o arquivo indicado
 2. Localizar a linha reportada
@@ -171,7 +171,7 @@ O `Loader.lua` reporta o módulo e a linha exata em caso de falha:
 4. Realizar commit
 5. Executar o Loader novamente para validar
 
-### 7.2. Erros Comuns
+### Erros Comuns
 
 | Mensagem | Causa | Solução |
 |----------|-------|---------|
@@ -182,7 +182,7 @@ O `Loader.lua` reporta o módulo e a linha exata em caso de falha:
 
 ---
 
-## 8. Versionamento
+## 📅 Versionamento
 
 Alterações nos módulos devem seguir o padrão **Conventional Commits**:
 
@@ -195,10 +195,10 @@ refactor: reorganizado módulo W
 
 ---
 
-## 9. Referências
+## 🔗 Referências
 
-- [README principal](../README.md)
-- [Loader.lua](../Loader.lua)
+- 📄 [README principal](../README.md)
+- 📄 [Loader.lua](../Loader.lua)
 
 ---
 
