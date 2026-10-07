@@ -524,69 +524,77 @@ function BG.toggleAcessorioFlutuante(ativar)
         acessorioAtivo = true
         acessorioPartes = {}
 
+        -- offset = posicao RELATIVA ao torso (Vector3)
+        -- size   = tamanho (bola = cubo uniforme, ex: 0.5 -> 0.5x0.5x0.5)
         local defs = {
-            ["Part3"] = {cf={-0.2433,6.0213,1.2728,-0.9741,-0.0355,0.2234,-0.0166,0.9962,0.0856,-0.2256,0.0796,-0.9710}, s=Vector3.new(0.08,0.08,0.08), c=Color3.fromRGB(255,191,255), m="Air"},
-            ["Part5"] = {cf={0.1319,5.9887,0.5391,-0.8748,-0.0355,0.4832,0.0076,0.9962,0.0868,-0.4845,0.0796,-0.8712}, s=Vector3.new(1.55,1.55,1.55), c=Color3.fromRGB(0,0,0), m="Fabric"},
-            ["Part6"] = {cf={1.0896,6.0631,1.3435,-0.9553,-0.0355,-0.2936,-0.0573,0.9962,0.0658,0.2901,0.0797,-0.9537}, s=Vector3.new(0.08,0.08,0.08), c=Color3.fromRGB(255,191,255), m="Air"},
-            ["Part4"] = {cf={-0.0347,5.9909,0.9014,-0.8662,-0.0355,0.4985,0.0091,0.9962,0.0867,-0.4996,0.0797,-0.8626}, s=Vector3.new(0.92,0.92,0.92), c=Color3.fromRGB(255,191,255), m="Air"},
-            ["Part2"] = {cf={0.9351,6.0223,0.9409,-0.9500,-0.0355,-0.3102,-0.0584,0.9962,0.0648,0.3067,0.0797,-0.9485}, s=Vector3.new(0.92,0.92,0.92), c=Color3.fromRGB(255,200,253), m="Air"},
-            ["Part"]  = {cf={0.7669,6.0090,0.5685,-0.7179,-0.0355,-0.6952,-0.0809,0.9962,0.0327,0.6914,0.0797,-0.7180}, s=Vector3.new(1.55,1.55,1.55), c=Color3.fromRGB(0,0,0), m="Fabric"}
+            { nome="Part",  offset=Vector3.new( 0.0, 3.0, 0.0), size=0.85, color=Color3.fromRGB(  0,   0,   0), mat="Fabric" },
+            { nome="Part2", offset=Vector3.new(-0.6, 3.5, 0.0), size=0.42, color=Color3.fromRGB(255, 200, 253), mat="Neon"   },
+            { nome="Part3", offset=Vector3.new( 0.6, 3.5, 0.0), size=0.42, color=Color3.fromRGB(255, 200, 253), mat="Neon"   },
+            { nome="Part4", offset=Vector3.new(-0.35,2.6, 0.0), size=0.30, color=Color3.fromRGB(255, 191, 255), mat="Neon"   },
+            { nome="Part5", offset=Vector3.new( 0.35,2.6, 0.0), size=0.30, color=Color3.fromRGB(255, 191, 255), mat="Neon"   },
+            { nome="Part6", offset=Vector3.new( 0.0, 3.9, 0.0), size=0.32, color=Color3.fromRGB(255, 191, 255), mat="Neon"   },
         }
 
-        local localSeguro = Vector3.new(0, -250, 0)
         local partes = {}
+        local base = torso.CFrame
 
-        for nome, d in pairs(defs) do
-            local cf = CFrame.new(d.cf[1],d.cf[2],d.cf[3],d.cf[4],d.cf[5],d.cf[6],d.cf[7],d.cf[8],d.cf[9],d.cf[10],d.cf[11],d.cf[12])
-            local p = F3X:CreatePart("Normal", CFrame.new(localSeguro), workspace)
+        -- 1) Cria TODAS as partes ja ancoradas na posicao correta em volta do torso
+        for _, d in ipairs(defs) do
+            local worldCF = base * CFrame.new(d.offset)
+            local p = F3X:CreatePart("Ball", worldCF, workspace)
             if p then
-                F3X:Resize(p, d.s)
-                F3X:SetColor(p, d.c)
-                pcall(function() p.Material = Enum.Material[d.m] end)
+                F3X:Resize(p, Vector3.new(d.size, d.size, d.size))
+                F3X:SetColor(p, d.color)
+                pcall(function() p.Material = Enum.Material[d.mat] end)
                 F3X:SetCollision(p, false)
                 F3X:Anchor(p)
-                p.CFrame = cf
-                partes[nome] = p
+                p.CFrame = worldCF
+                p.Name = "BG_Acessorio_" .. d.nome
+                partes[d.nome] = p
                 table.insert(acessorioPartes, p)
             end
         end
 
-        task.wait(0.3)
-
-        local function weld(p1, p2)
-            if not p1 or not p2 then return end
-            pcall(function()
-                seBTP:InvokeServer("CreateConstraints", {p1}, {}, p2, "Weld")
-            end)
+        if not partes["Part"] then
+            notifyErro("Falha ao criar partes!")
+            acessorioAtivo = false
+            return
         end
 
-        weld(partes["Part3"], partes["Part4"])
-        weld(partes["Part4"], partes["Part5"])
-        weld(partes["Part6"], partes["Part2"])
-        weld(partes["Part2"], partes["Part5"])
-
-        task.wait(0.3)
-
-        local destinoCF = torso.CFrame * CFrame.new(0, 2, 0)
-        if partes["Part5"] then
-            F3X:Move(partes["Part5"], destinoCF)
-        end
         task.wait(0.2)
 
+        -- 2) Welda TODAS as partes no root ("Part") enquanto ainda estao ancoradas
+        local root = partes["Part"]
+        for nome, p in pairs(partes) do
+            if nome ~= "Part" then
+                pcall(function()
+                    seBTP:InvokeServer("CreateConstraints", {p}, {}, root, "Weld")
+                end)
+            end
+        end
+
+        task.wait(0.2)
+
+        -- 3) Welda o ROOT no torso (aqui faz o conjunto seguir o player)
+        pcall(function()
+            seBTP:InvokeServer("CreateConstraints", {root}, {}, torso, "Weld")
+        end)
+
+        task.wait(0.2)
+
+        -- 4) Desancora tudo — os welds mantem o conjunto grudado no torso
         for _, p in pairs(partes) do
             F3X:Unanchor(p)
         end
-        task.wait(0.2)
-
-        weld(partes["Part5"], torso)
-        weld(partes["Part"], torso)
 
         notifySucesso("Acessorio flutuante criado!")
     else
         if not acessorioAtivo then return end
         acessorioAtivo = false
         for _, p in ipairs(acessorioPartes) do
-            if p and p.Parent then pcall(function() F3X:Remove(p) end) end
+            if p and p.Parent then
+                pcall(function() F3X:Remove(p) end)
+            end
         end
         acessorioPartes = {}
         notifyInfo("Acessorio removido")
