@@ -538,8 +538,8 @@ function BG.toggleAcessorioFlutuante(ativar)
         local refCF  = CFrame.new(r[1],r[2],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10],r[11],r[12])
         local refInv = refCF:Inverse()
 
-        -- onde o conjunto vai ficar: 1.3 studs acima do torso (mesmo alvo do codigo original)
-        local destinoRoot = torso.CFrame * CFrame.new(0, 1.3, 0)
+        -- onde o conjunto vai ficar: 0.5 studs acima do torso (mesmo alvo do codigo original)
+        local destinoRoot = torso.CFrame * CFrame.new(0, 0.5, 0)
 
         local partes = {}
 
