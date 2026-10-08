@@ -33,28 +33,7 @@ O projeto é dividido em **módulos independentes** carregados dinamicamente via
 
 <div align="center">
 
-```
-┌─────────────────────────────────────────────┐
-│  🖤  BlackGUI F3X + HDADMIN          —  X  │
-├─────────────────────────────────────────────┤
-│  👤 Jogador  👁️ Visual  🗺️ Mapa  ⚙️ Admin   │
-├─────────────────────────────────────────────┤
-│  ┌───────────────────────────────────────┐  │
-│  │  Clone Personagem + Arma              │  │
-│  │  [ DESLIGADO ]                        │  │
-│  └───────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────┐  │
-│  │  🧟 ZUMBI                             │  │
-│  │  [ DESLIGADO ]                        │  │
-│  └───────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────┐  │
-│  │  🔨 TOOL HACKER                       │  │
-│  └───────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────┐  │
-│  │  😈 MODO TÓXICO (ANTI-UN)             │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
-```
+<img src="https://raw.githubusercontent.com/EchoX10/Bl5ckGUI/main/assets/preview.png" width="800" />
 
 *Interface com tema AMOLED preto, abas horizontais e notificações animadas.*
 
