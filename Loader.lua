@@ -62,4 +62,3 @@ for i, arquivo in ipairs(MODULOS) do
 end
 
 print("════════ BLACKGUI PRONTA ════════")
-if BG.notifySucesso then BG.notifySucesso("BlackGUI carregada!") end
