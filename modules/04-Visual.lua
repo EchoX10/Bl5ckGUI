@@ -263,6 +263,8 @@ local MUSIC_PRESETS = {
     {id = 1839246711, vol = 9999, pitch = 0.9, nome = "Jumpsytle"},
     {id = 95156028272944, vol = 9999, pitch = 0.2, nome = "Padrao"},
     {id = 16190761193, vol = 9999, pitch = 0.9, nome = "Jugsta"},
+    {id = 85598267402579, vol = 9999, pitch = 0.9, nome = "Kit"},
+    {id = 74031550280289, vol = 9999, pitch = 0.9, nome = "Her Boyfriend"},
     {id = 105819456196233, vol = 9999, pitch = 0.3, nome = "Fast Beep"},
     {id = 75485931767123, vol = 9999, pitch = 0.9, nome = "Alone"},
     {id = 88914658183319, vol = 9999, pitch = 0.8, nome = "China Music"},
