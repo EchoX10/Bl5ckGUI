@@ -247,11 +247,12 @@ local tab1 = adicionarAba("Jogador", 1)
 criarToggle("Clone Personagem + Arma", function(e)
     if e then BG.toggleClonePersonagem(true) else BG.toggleClonePersonagem(false) end
 end, tab1)
-criarToggle("Acessorio Flutuante", function(e) BG.toggleAcessorioFlutuante(e) end, tab1)
+criarBotao("Feminizar (R6)", BG.botaoFeminizar, tab1)
+criarToggle("Peitos (R6)", function(e) BG.toggleAcessorioFlutuante(e) end, tab1)
 criarToggle("Zumbi", function(e) BG.toggleZumbi(e) end, tab1)
 criarBotao("Tool Invisible", BG.botaoCriarToolInvisible, tab1)
 criarBotao("Tool Hacker", BG.botaoCriarToolHacker, tab1)
-criarBotao("Modo Toxico (Anti-Un)", BG.botaoModoToxico, tab1)
+criarBotao("Modo Tóxico (Anti-Un)", BG.botaoModoToxico, tab1)
 criarBotao("Comandos em Jogador", function()
     BG.criarListaJogadores(function(j) BG.criarListaComandos(j) end)
 end, tab1)
@@ -261,7 +262,7 @@ end, tab1)
 
 -- ABA 2: VISUAL
 local tab2 = adicionarAba("Visual", 2)
-criarToggle("Spam de Particulas", function(e)
+criarToggle("Spam de Partículas Fakes", function(e)
     if e then BG.iniciarSpam() else BG.pararSpam() end
 end, tab2)
 criarToggle("Esconder GUIs + Mutar", function(e)
@@ -270,20 +271,20 @@ end, tab2)
 criarToggle("Limpar Efeitos (loop)", function(e)
     if e then BG.ligarLimpar() else BG.desligarLimpar() end
 end, tab2)
-criarToggle("Particulas Server-Side", function(e)
+criarToggle("Partículas", function(e)
     if e then BG.ligarParticulas() else BG.desligarParticulas() end
 end, tab2)
-criarBotao("Mesh Glitch (-3500)", BG.botaoMeshGlitch, tab2)
+criarBotao("Skybox", BG.botaoMeshGlitch, tab2)
 criarBotao("Texturizar Mapa", BG.botaoTexturizarTudo, tab2)
 criarBotao("Colorir Mapa Todo", BG.botaoColorirMapa, tab2)
 
 -- ABA 3: MAPA
 local tab3 = adicionarAba("Mapa", 3)
 criarBotao("Natural Disaster", BG.botaoNaturalDisaster, tab3)
-criarBotao("Mapa Rapido", BG.botaoConstruirMapaRapido, tab3)
-criarBotao("Metero Audio", BG.executarMeteroAudio, tab3)
+criarBotao("Mapa Rápido", BG.botaoConstruirMapaRapido, tab3)
+criarBotao("Bomba Nuclear", BG.executarMeteroAudio, tab3)
 criarBotao("Meteorito Gigante", BG.botaoMeteorito, tab3)
-criarBotao("Bandeira Colorida", BG.botaoBandeira, tab3)
+criarBotao("Bandeira Map", BG.botaoBandeira, tab3)
 criarBotao("Criar NPC Controlavel", BG.criarNPC, tab3)
 
 -- ABA 4: ADMIN
