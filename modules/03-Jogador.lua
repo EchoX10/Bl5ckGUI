@@ -613,9 +613,14 @@ local function salvarAparencia()
     local char = plr.Character
     if not char then return false end
 
-    local dados = { meshes = {}, shirtId = nil, pantsId = nil }
+    local dados = {
+        meshes = {},
+        shirtId = nil,
+        pantsId = nil,
+        tshirtId = nil
+    }
 
-    -- Só salva as partes que a gente REALMENTE modifica
+    -- Só as partes que realmente mudam
     for _, nomeParte in ipairs({"Left Leg", "Right Leg", "Left Arm", "Right Arm", "Torso"}) do
         local parte = char:FindFirstChild(nomeParte)
         if parte and parte:IsA("BasePart") then
@@ -638,6 +643,10 @@ local function salvarAparencia()
     local pants = char:FindFirstChildOfClass("Pants")
     if pants then dados.pantsId = pants.PantsTemplate end
 
+    -- CORREÇÃO: também salva TShirt (camiseta)
+    local tshirt = char:FindFirstChildOfClass("ShirtGraphic")
+    if tshirt then dados.tshirtId = tshirt.Graphic end
+
     BG._aparenciaSalva = dados
     return true
 end
@@ -646,11 +655,18 @@ local function lerAparencia()
     return BG._aparenciaSalva
 end
 
+-- ============== APLICA MESH FORÇANDO O ID ==============
 local function aplicarMeshFeminina(seBTP, parte, meshId)
-    pcall(function()
-        seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
-    end)
-    task.wait(0.1)
+    -- Garante que existe a SpecialMesh
+    local mesh = parte:FindFirstChildOfClass("SpecialMesh")
+    if not mesh then
+        pcall(function()
+            seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
+        end)
+        task.wait(0.1)
+    end
+
+    -- SyncMesh SEMPRE manda MeshId (não confia no CreateMeshes anterior)
     pcall(function()
         seBTP:InvokeServer("SyncMesh", {{
             Part = parte,
@@ -659,6 +675,36 @@ local function aplicarMeshFeminina(seBTP, parte, meshId)
             Scale = Vector3.new(1, 1, 1)
         }})
     end)
+end
+
+-- ============== REAPLICA ROUPAS ==============
+local function reaplicarRoupas(char, shirtId, pantsId, tshirtId)
+    if shirtId and shirtId ~= "" then
+        local shirt = char:FindFirstChildOfClass("Shirt")
+        if not shirt then
+            shirt = Instance.new("Shirt")
+            shirt.Parent = char
+        end
+        pcall(function() shirt.ShirtTemplate = shirtId end)
+    end
+
+    if pantsId and pantsId ~= "" then
+        local pants = char:FindFirstChildOfClass("Pants")
+        if not pants then
+            pants = Instance.new("Pants")
+            pants.Parent = char
+        end
+        pcall(function() pants.PantsTemplate = pantsId end)
+    end
+
+    if tshirtId and tshirtId ~= "" then
+        local tshirt = char:FindFirstChildOfClass("ShirtGraphic")
+        if not tshirt then
+            tshirt = Instance.new("ShirtGraphic")
+            tshirt.Parent = char
+        end
+        pcall(function() tshirt.Graphic = tshirtId end)
+    end
 end
 
 function BG.botaoFeminizar()
@@ -680,7 +726,6 @@ function BG.botaoFeminizar()
     -- Salva ANTES de qualquer coisa
     salvarAparencia()
 
-    -- Aplica as meshes
     notifyInfo("Aplicando meshes femininas...")
     local aplicadas = 0
 
@@ -693,11 +738,84 @@ function BG.botaoFeminizar()
         end
     end
 
+    -- CORREÇÃO: reaplica roupa depois das meshes
+    task.wait(0.3)
+    local dados = lerAparencia()
+    if dados then
+        reaplicarRoupas(char, dados.shirtId, dados.pantsId, dados.tshirtId)
+    end
+
     if aplicadas > 0 then
         notifySucesso("Feminizada em " .. aplicadas .. " partes")
     else
         notifyErro("Nenhuma parte encontrada")
     end
+end
+
+-- ============== RESTAURAR APARÊNCIA ==============
+function BG.botaoRestaurarAparencia()
+    local char = plr.Character
+    if not char then notifyErro("Character não encontrado") return end
+
+    local seBTP = getFork3XEndpoint()
+    if not seBTP then notifyErro("Building Tools+ não equipada") return end
+
+    local dados = lerAparencia()
+    if not dados then
+        notifyErro("Nenhum save encontrado")
+        notifyInfo("Feminiza uma vez antes pra criar o save")
+        return
+    end
+
+    notifyInfo("Restaurando aparência...")
+    task.wait(0.3)
+
+    local restauradas = 0
+
+    for nomeParte, dadosParte in pairs(dados.meshes) do
+        local parte = char:FindFirstChild(nomeParte)
+        if parte and parte:IsA("BasePart") then
+            if dadosParte.meshId == "" then
+                -- Não tinha mesh: destrói
+                local mesh = parte:FindFirstChildOfClass("SpecialMesh")
+                if mesh then
+                    pcall(function()
+                        seBTP:InvokeServer("SyncMesh", {{
+                            Part = parte,
+                            MeshId = "",
+                            TextureId = "",
+                            Scale = Vector3.new(1, 1, 1)
+                        }})
+                    end)
+                    task.wait(0.1)
+                    pcall(function() mesh:Destroy() end)
+                end
+                restauradas = restauradas + 1
+            else
+                -- Tinha mesh: aplica de volta
+                pcall(function()
+                    seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
+                end)
+                task.wait(0.1)
+                pcall(function()
+                    seBTP:InvokeServer("SyncMesh", {{
+                        Part = parte,
+                        MeshId = dadosParte.meshId,
+                        TextureId = dadosParte.textureId,
+                        Scale = Vector3.new(dadosParte.scale[1], dadosParte.scale[2], dadosParte.scale[3])
+                    }})
+                end)
+                restauradas = restauradas + 1
+                task.wait(0.15)
+            end
+        end
+    end
+
+    -- CORREÇÃO: reaplica roupa DEPOIS de restaurar meshes
+    task.wait(0.3)
+    reaplicarRoupas(char, dados.shirtId, dados.pantsId, dados.tshirtId)
+
+    notifySucesso("Restauradas " .. restauradas .. " partes")
 end
 
 -- ============== RESTAURAR APARÊNCIA ==============
