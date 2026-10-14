@@ -615,7 +615,8 @@ local function salvarAparencia()
 
     local dados = { meshes = {}, shirtId = nil, pantsId = nil }
 
-    for _, nomeParte in ipairs({"Left Leg", "Right Leg", "Left Arm", "Right Arm", "Torso", "Head"}) do
+    -- Só salva as partes que a gente REALMENTE modifica
+    for _, nomeParte in ipairs({"Left Leg", "Right Leg", "Left Arm", "Right Arm", "Torso"}) do
         local parte = char:FindFirstChild(nomeParte)
         if parte and parte:IsA("BasePart") then
             local mesh = parte:FindFirstChildOfClass("SpecialMesh")
@@ -637,7 +638,6 @@ local function salvarAparencia()
     local pants = char:FindFirstChildOfClass("Pants")
     if pants then dados.pantsId = pants.PantsTemplate end
 
-    -- Sempre salva em memória (funciona 100%)
     BG._aparenciaSalva = dados
     return true
 end
@@ -723,11 +723,16 @@ function BG.botaoRestaurarAparencia()
     for nomeParte, dadosParte in pairs(dados.meshes) do
         local parte = char:FindFirstChild(nomeParte)
         if parte and parte:IsA("BasePart") then
+            local mesh = parte:FindFirstChildOfClass("SpecialMesh")
+
             if dadosParte.meshId == "" then
-                local mesh = parte:FindFirstChildOfClass("SpecialMesh")
-                if mesh then pcall(function() mesh:Destroy() end) end
+                -- Não tinha mesh original: só destrói a mesh que ficou
+                if mesh then
+                    pcall(function() mesh:Destroy() end)
+                end
                 restauradas = restauradas + 1
             else
+                -- Tinha mesh: aplica de volta
                 pcall(function()
                     seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
                 end)
@@ -746,25 +751,26 @@ function BG.botaoRestaurarAparencia()
         end
     end
 
+    -- Shirt
     if dados.shirtId then
         local shirt = char:FindFirstChildOfClass("Shirt")
         if not shirt then
             shirt = Instance.new("Shirt")
             shirt.Parent = char
         end
-        shirt.ShirtTemplate = dados.shirtId
+        pcall(function() shirt.ShirtTemplate = dados.shirtId end)
     end
 
+    -- Pants
     if dados.pantsId then
         local pants = char:FindFirstChildOfClass("Pants")
         if not pants then
             pants = Instance.new("Pants")
             pants.Parent = char
         end
-        pants.PantsTemplate = dados.pantsId
+        pcall(function() pants.PantsTemplate = dados.pantsId end)
     end
 
     notifySucesso("Restauradas " .. restauradas .. " partes")
 end
-
 print("[Jogador] Modulo carregado")
