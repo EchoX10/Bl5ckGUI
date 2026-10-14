@@ -598,4 +598,76 @@ function BG.toggleAcessorioFlutuante(ativar)
     end
 end
 
+-- ============== FEMINIZAR (R6) ==============
+local MESHES_FEMININO = {
+    ["Left Leg"]  = "18216320743",
+    ["Right Leg"] = "18216310657",
+    ["Left Arm"]  = "18216322936",
+    ["Right Arm"] = "18216316902",
+    ["Torso"]     = "18216271424"
+}
+
+function BG.botaoFeminizar()
+    local char = plr.Character
+    if not char then
+        notifyErro("Character não encontrado")
+        return
+    end
+
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        notifyErro("Humanoid não encontrado")
+        return
+    end
+
+    if humanoid.RigType ~= Enum.HumanoidRigType.R6 then
+        notifyErro("Esta função só funciona em R6")
+        notifyInfo("Muda teu avatar pra R6 nas configurações do Roblox")
+        return
+    end
+
+    local seBTP = getFork3XEndpoint()
+    if not seBTP then
+        notifyErro("Building Tools+ não equipada")
+        return
+    end
+
+    notifyInfo("Aplicando meshes femininas...")
+
+    local aplicadas = 0
+    local falhas = 0
+
+    for nomeParte, meshId in pairs(MESHES_FEMININO) do
+        local parte = char:FindFirstChild(nomeParte)
+        if parte and parte:IsA("BasePart") then
+            pcall(function()
+                seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
+            end)
+            task.wait(0.1)
+
+            pcall(function()
+                seBTP:InvokeServer("SyncMesh", {{
+                    Part = parte,
+                    MeshId = "rbxassetid://" .. meshId,
+                    Scale = Vector3.new(1, 1, 1)
+                }})
+            end)
+            aplicadas = aplicadas + 1
+            task.wait(0.15)
+        else
+            falhas = falhas + 1
+        end
+    end
+
+    if aplicadas > 0 then
+        notifySucesso("Feminizada em " .. aplicadas .. " partes")
+    else
+        notifyErro("Nenhuma parte foi encontrada")
+    end
+
+    if falhas > 0 then
+        notifyInfo(falhas .. " partes não encontradas")
+    end
+end
+
 print("[Jogador] Modulo carregado")
