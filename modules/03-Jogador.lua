@@ -607,21 +607,14 @@ local MESHES_FEMININO = {
     ["Torso"]     = "18216271424"
 }
 
-local ARQUIVO_APARENCIA = "blackgui_aparencia.txt"
+BG._aparenciaSalva = nil
 
--- Salva o estado atual (meshes + texturas) num arquivo local
 local function salvarAparencia()
     local char = plr.Character
     if not char then return false end
 
-    local dados = {
-        meshes = {},
-        shirtId = nil,
-        pantsId = nil,
-        timestamp = os.time()
-    }
+    local dados = { meshes = {}, shirtId = nil, pantsId = nil }
 
-    -- Salva mesh + texture de cada parte
     for _, nomeParte in ipairs({"Left Leg", "Right Leg", "Left Arm", "Right Arm", "Torso", "Head"}) do
         local parte = char:FindFirstChild(nomeParte)
         if parte and parte:IsA("BasePart") then
@@ -630,64 +623,34 @@ local function salvarAparencia()
                 dados.meshes[nomeParte] = {
                     meshId = mesh.MeshId or "",
                     textureId = mesh.TextureId or "",
-                    scale = {mesh.Scale.X, mesh.Scale.Y, mesh.Scale.Z},
-                    meshType = mesh.MeshType.Name,
-                    vertexColor = {
-                        mesh.VertexColor.R,
-                        mesh.VertexColor.G,
-                        mesh.VertexColor.B
-                    }
+                    scale = {mesh.Scale.X, mesh.Scale.Y, mesh.Scale.Z}
                 }
             else
-                dados.meshes[nomeParte] = {
-                    meshId = "",
-                    textureId = "",
-                    scale = {1, 1, 1},
-                    meshType = "Head"
-                }
+                dados.meshes[nomeParte] = { meshId = "", textureId = "", scale = {1, 1, 1} }
             end
         end
     end
 
-    -- Salva Shirt e Pants (a shirt e pants ficam aqui)
     local shirt = char:FindFirstChildOfClass("Shirt")
-    if shirt then
-        dados.shirtId = shirt.ShirtTemplate
-    end
+    if shirt then dados.shirtId = shirt.ShirtTemplate end
 
     local pants = char:FindFirstChildOfClass("Pants")
-    if pants then
-        dados.pantsId = pants.PantsTemplate
-    end
+    if pants then dados.pantsId = pants.PantsTemplate end
 
-    -- Salva em arquivo
-    local ok = pcall(function()
-        local json = game:GetService("HttpService"):JSONEncode(dados)
-        writefile(ARQUIVO_APARENCIA, json)
-    end)
-
-    return ok
+    -- Sempre salva em memória (funciona 100%)
+    BG._aparenciaSalva = dados
+    return true
 end
 
--- Lê o arquivo salvo
 local function lerAparencia()
-    local dados = nil
-    pcall(function()
-        if isfile(ARQUIVO_APARENCIA) then
-            local json = readfile(ARQUIVO_APARENCIA)
-            dados = game:GetService("HttpService"):JSONDecode(json)
-        end
-    end)
-    return dados
+    return BG._aparenciaSalva
 end
 
--- Aplica mesh feminina numa parte
 local function aplicarMeshFeminina(seBTP, parte, meshId)
     pcall(function()
         seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
     end)
     task.wait(0.1)
-
     pcall(function()
         seBTP:InvokeServer("SyncMesh", {{
             Part = parte,
@@ -707,26 +670,17 @@ function BG.botaoFeminizar()
 
     if humanoid.RigType ~= Enum.HumanoidRigType.R6 then
         notifyErro("Esta função só funciona em R6")
-        notifyInfo("Mude seu avatar para R6 nas configurações do Roblox")
+        notifyInfo("Muda teu avatar pra R6 nas configurações do Roblox")
         return
     end
 
     local seBTP = getFork3XEndpoint()
     if not seBTP then notifyErro("Building Tools+ não equipada") return end
 
-    -- PASSO 1: Salva a aparência atual ANTES de mexer
-    notifyInfo("Salvando aparência original...")
-    local salvou = salvarAparencia()
+    -- Salva ANTES de qualquer coisa
+    salvarAparencia()
 
-    if salvou then
-        notifySucesso("Aparência salva em arquivo local")
-    else
-        notifyErro("Falha ao salvar — pode perder a roupa")
-    end
-
-    task.wait(0.3)
-
-    -- PASSO 2: Aplica as meshes
+    -- Aplica as meshes
     notifyInfo("Aplicando meshes femininas...")
     local aplicadas = 0
 
@@ -741,7 +695,6 @@ function BG.botaoFeminizar()
 
     if aplicadas > 0 then
         notifySucesso("Feminizada em " .. aplicadas .. " partes")
-        notifyInfo("Use 'Restaurar Aparência' pra reverter")
     else
         notifyErro("Nenhuma parte encontrada")
     end
@@ -758,7 +711,7 @@ function BG.botaoRestaurarAparencia()
     local dados = lerAparencia()
     if not dados then
         notifyErro("Nenhum save encontrado")
-        notifyInfo("Feminize uma vez antes para criar o save")
+        notifyInfo("Feminiza uma vez antes pra criar o save")
         return
     end
 
@@ -767,25 +720,18 @@ function BG.botaoRestaurarAparencia()
 
     local restauradas = 0
 
-    -- Restaura mesh + texture de cada parte
     for nomeParte, dadosParte in pairs(dados.meshes) do
         local parte = char:FindFirstChild(nomeParte)
         if parte and parte:IsA("BasePart") then
-            local mesh = parte:FindFirstChildOfClass("SpecialMesh")
-
-            -- Se não tinha mesh, deleta a que tá lá
             if dadosParte.meshId == "" then
-                if mesh then
-                    pcall(function() mesh:Destroy() end)
-                end
+                local mesh = parte:FindFirstChildOfClass("SpecialMesh")
+                if mesh then pcall(function() mesh:Destroy() end) end
                 restauradas = restauradas + 1
             else
-                -- Se tinha, aplica de volta
                 pcall(function()
                     seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
                 end)
                 task.wait(0.1)
-
                 pcall(function()
                     seBTP:InvokeServer("SyncMesh", {{
                         Part = parte,
@@ -800,7 +746,6 @@ function BG.botaoRestaurarAparencia()
         end
     end
 
-    -- Restaura Shirt (shirt fica aqui)
     if dados.shirtId then
         local shirt = char:FindFirstChildOfClass("Shirt")
         if not shirt then
@@ -810,7 +755,6 @@ function BG.botaoRestaurarAparencia()
         shirt.ShirtTemplate = dados.shirtId
     end
 
-    -- Restaura Pants
     if dados.pantsId then
         local pants = char:FindFirstChildOfClass("Pants")
         if not pants then
@@ -821,7 +765,6 @@ function BG.botaoRestaurarAparencia()
     end
 
     notifySucesso("Restauradas " .. restauradas .. " partes")
-    notifyInfo("Se a textura não voltar, reentre no jogo")
 end
 
 print("[Jogador] Modulo carregado")
