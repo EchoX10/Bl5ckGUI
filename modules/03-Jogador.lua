@@ -598,13 +598,19 @@ function BG.toggleAcessorioFlutuante(ativar)
     end
 end
 
--- ============== FEMINIZAR (R6) COM SALVAMENTO ==============
+-- ============== FEMINIZAR (R6) COM DECAL DE ROUPA ==============
 local MESHES_FEMININO = {
     ["Left Leg"]  = "18216320743",
     ["Right Leg"] = "18216310657",
     ["Left Arm"]  = "18216322936",
     ["Right Arm"] = "18216316902",
     ["Torso"]     = "18216271424"
+}
+
+local TODAS_FACES = {
+    Enum.NormalId.Front, Enum.NormalId.Back,
+    Enum.NormalId.Left, Enum.NormalId.Right,
+    Enum.NormalId.Top, Enum.NormalId.Bottom
 }
 
 BG._aparenciaSalva = nil
@@ -617,10 +623,10 @@ local function salvarAparencia()
         meshes = {},
         shirtId = nil,
         pantsId = nil,
-        tshirtId = nil
+        tshirtId = nil,
+        coresOriginais = {}
     }
 
-    -- Só as partes que realmente mudam
     for _, nomeParte in ipairs({"Left Leg", "Right Leg", "Left Arm", "Right Arm", "Torso"}) do
         local parte = char:FindFirstChild(nomeParte)
         if parte and parte:IsA("BasePart") then
@@ -634,6 +640,13 @@ local function salvarAparencia()
             else
                 dados.meshes[nomeParte] = { meshId = "", textureId = "", scale = {1, 1, 1} }
             end
+
+            -- Salva também a cor original (pra restaurar)
+            dados.coresOriginais[nomeParte] = {
+                r = parte.Color.R,
+                g = parte.Color.G,
+                b = parte.Color.B
+            }
         end
     end
 
@@ -643,7 +656,6 @@ local function salvarAparencia()
     local pants = char:FindFirstChildOfClass("Pants")
     if pants then dados.pantsId = pants.PantsTemplate end
 
-    -- CORREÇÃO: também salva TShirt (camiseta)
     local tshirt = char:FindFirstChildOfClass("ShirtGraphic")
     if tshirt then dados.tshirtId = tshirt.Graphic end
 
@@ -655,9 +667,8 @@ local function lerAparencia()
     return BG._aparenciaSalva
 end
 
--- ============== APLICA MESH FORÇANDO O ID ==============
+-- ============== APLICA MESH ==============
 local function aplicarMeshFeminina(seBTP, parte, meshId)
-    -- Garante que existe a SpecialMesh
     local mesh = parte:FindFirstChildOfClass("SpecialMesh")
     if not mesh then
         pcall(function()
@@ -666,7 +677,6 @@ local function aplicarMeshFeminina(seBTP, parte, meshId)
         task.wait(0.1)
     end
 
-    -- SyncMesh SEMPRE manda MeshId (não confia no CreateMeshes anterior)
     pcall(function()
         seBTP:InvokeServer("SyncMesh", {{
             Part = parte,
@@ -677,34 +687,42 @@ local function aplicarMeshFeminina(seBTP, parte, meshId)
     end)
 end
 
--- ============== REAPLICA ROUPAS ==============
-local function reaplicarRoupas(char, shirtId, pantsId, tshirtId)
-    if shirtId and shirtId ~= "" then
-        local shirt = char:FindFirstChildOfClass("Shirt")
-        if not shirt then
-            shirt = Instance.new("Shirt")
-            shirt.Parent = char
-        end
-        pcall(function() shirt.ShirtTemplate = shirtId end)
+-- ============== APLICA TEXTURA EM TODAS AS FACES ==============
+local function aplicarTexturaEmTodasFaces(seBTP, parte, textureId)
+    -- Limpa decals/texturas antigas primeiro
+    for _, face in ipairs(TODAS_FACES) do
+        pcall(function()
+            seBTP:InvokeServer("CreateTextures", {{
+                Part = parte,
+                Face = face,
+                TextureType = "Decal"
+            }})
+        end)
     end
+    task.wait(0.1)
 
-    if pantsId and pantsId ~= "" then
-        local pants = char:FindFirstChildOfClass("Pants")
-        if not pants then
-            pants = Instance.new("Pants")
-            pants.Parent = char
-        end
-        pcall(function() pants.PantsTemplate = pantsId end)
+    -- Aplica a nova textura em todas as faces
+    for _, face in ipairs(TODAS_FACES) do
+        pcall(function()
+            seBTP:InvokeServer("SyncTexture", {{
+                Part = parte,
+                Face = face,
+                TextureType = "Decal",
+                Texture = "rbxassetid://" .. textureId
+            }})
+        end)
     end
+end
 
-    if tshirtId and tshirtId ~= "" then
-        local tshirt = char:FindFirstChildOfClass("ShirtGraphic")
-        if not tshirt then
-            tshirt = Instance.new("ShirtGraphic")
-            tshirt.Parent = char
-        end
-        pcall(function() tshirt.Graphic = tshirtId end)
+-- ============== EXTRAI ID DA URL ==============
+local function extrairIdDaUrl(url)
+    if not url or url == "" then return nil end
+    -- Formato: "rbxassetid://123456" ou "http://www.roblox.com/asset/?id=123456"
+    local id = url:match("rbxassetid://(%d+)")
+    if not id then
+        id = url:match("id=(%d+)")
     end
+    return id
 end
 
 function BG.botaoFeminizar()
@@ -723,7 +741,6 @@ function BG.botaoFeminizar()
     local seBTP = getFork3XEndpoint()
     if not seBTP then notifyErro("Building Tools+ não equipada") return end
 
-    -- Salva ANTES de qualquer coisa
     salvarAparencia()
 
     notifyInfo("Aplicando meshes femininas...")
@@ -738,11 +755,67 @@ function BG.botaoFeminizar()
         end
     end
 
-    -- CORREÇÃO: reaplica roupa depois das meshes
+    -- Agora aplica a textura da roupa em todas as faces
     task.wait(0.3)
     local dados = lerAparencia()
     if dados then
-        reaplicarRoupas(char, dados.shirtId, dados.pantsId, dados.tshirtId)
+        -- Pega os IDs da shirt e pants
+        local shirtId = extrairIdDaUrl(dados.shirtId)
+        local pantsId = extrairIdDaUrl(dados.pantsId)
+
+        print("[Feminizar] Shirt ID:", shirtId)
+        print("[Feminizar] Pants ID:", pantsId)
+
+        -- Aplica a textura da Pants nas pernas (Left Leg + Right Leg)
+        if pantsId then
+            for _, nomeParte in ipairs({"Left Leg", "Right Leg"}) do
+                local parte = char:FindFirstChild(nomeParte)
+                if parte then
+                    aplicarTexturaEmTodasFaces(seBTP, parte, pantsId)
+                    task.wait(0.2)
+                end
+            end
+        end
+
+        -- Aplica a textura da Shirt no Torso e nos braços
+        if shirtId then
+            for _, nomeParte in ipairs({"Torso", "Left Arm", "Right Arm"}) do
+                local parte = char:FindFirstChild(nomeParte)
+                if parte then
+                    aplicarTexturaEmTodasFaces(seBTP, parte, shirtId)
+                    task.wait(0.2)
+                end
+            end
+        end
+    end
+
+    -- Reaplica roupa "normal" também (caso funcione em algumas partes)
+    task.wait(0.3)
+    if dados then
+        if dados.shirtId and dados.shirtId ~= "" then
+            local shirt = char:FindFirstChildOfClass("Shirt")
+            if not shirt then
+                shirt = Instance.new("Shirt")
+                shirt.Parent = char
+            end
+            pcall(function() shirt.ShirtTemplate = dados.shirtId end)
+        end
+        if dados.pantsId and dados.pantsId ~= "" then
+            local pants = char:FindFirstChildOfClass("Pants")
+            if not pants then
+                pants = Instance.new("Pants")
+                pants.Parent = char
+            end
+            pcall(function() pants.PantsTemplate = dados.pantsId end)
+        end
+        if dados.tshirtId and dados.tshirtId ~= "" then
+            local tshirt = char:FindFirstChildOfClass("ShirtGraphic")
+            if not tshirt then
+                tshirt = Instance.new("ShirtGraphic")
+                tshirt.Parent = char
+            end
+            pcall(function() tshirt.Graphic = dados.tshirtId end)
+        end
     end
 
     if aplicadas > 0 then
@@ -750,6 +823,114 @@ function BG.botaoFeminizar()
     else
         notifyErro("Nenhuma parte encontrada")
     end
+end
+
+-- ============== RESTAURAR APARÊNCIA ==============
+function BG.botaoRestaurarAparencia()
+    local char = plr.Character
+    if not char then notifyErro("Character não encontrado") return end
+
+    local seBTP = getFork3XEndpoint()
+    if not seBTP then notifyErro("Building Tools+ não equipada") return end
+
+    local dados = lerAparencia()
+    if not dados then
+        notifyErro("Nenhum save encontrado")
+        notifyInfo("Feminiza uma vez antes pra criar o save")
+        return
+    end
+
+    notifyInfo("Restaurando aparência...")
+    task.wait(0.3)
+
+    local restauradas = 0
+
+    for nomeParte, dadosParte in pairs(dados.meshes) do
+        local parte = char:FindFirstChild(nomeParte)
+        if parte and parte:IsA("BasePart") then
+            -- Remove decals aplicados
+            for _, face in ipairs(TODAS_FACES) do
+                pcall(function()
+                    seBTP:InvokeServer("SyncTexture", {{
+                        Part = parte,
+                        Face = face,
+                        TextureType = "Decal",
+                        Texture = ""
+                    }})
+                end)
+            end
+            task.wait(0.1)
+
+            if dadosParte.meshId == "" then
+                local mesh = parte:FindFirstChildOfClass("SpecialMesh")
+                if mesh then
+                    pcall(function()
+                        seBTP:InvokeServer("SyncMesh", {{
+                            Part = parte,
+                            MeshId = "",
+                            TextureId = "",
+                            Scale = Vector3.new(1, 1, 1)
+                        }})
+                    end)
+                    task.wait(0.1)
+                    pcall(function() mesh:Destroy() end)
+                end
+                restauradas = restauradas + 1
+            else
+                pcall(function()
+                    seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
+                end)
+                task.wait(0.1)
+                pcall(function()
+                    seBTP:InvokeServer("SyncMesh", {{
+                        Part = parte,
+                        MeshId = dadosParte.meshId,
+                        TextureId = dadosParte.textureId,
+                        Scale = Vector3.new(dadosParte.scale[1], dadosParte.scale[2], dadosParte.scale[3])
+                    }})
+                end)
+                restauradas = restauradas + 1
+                task.wait(0.15)
+            end
+
+            -- Restaura a cor original
+            local cor = dados.coresOriginais[nomeParte]
+            if cor then
+                pcall(function()
+                    F3X:SetColor(parte, Color3.new(cor.r, cor.g, cor.b))
+                end)
+            end
+        end
+    end
+
+    -- Reaplica a roupa
+    task.wait(0.3)
+    if dados.shirtId and dados.shirtId ~= "" then
+        local shirt = char:FindFirstChildOfClass("Shirt")
+        if not shirt then
+            shirt = Instance.new("Shirt")
+            shirt.Parent = char
+        end
+        pcall(function() shirt.ShirtTemplate = dados.shirtId end)
+    end
+    if dados.pantsId and dados.pantsId ~= "" then
+        local pants = char:FindFirstChildOfClass("Pants")
+        if not pants then
+            pants = Instance.new("Pants")
+            pants.Parent = char
+        end
+        pcall(function() pants.PantsTemplate = dados.pantsId end)
+    end
+    if dados.tshirtId and dados.tshirtId ~= "" then
+        local tshirt = char:FindFirstChildOfClass("ShirtGraphic")
+        if not tshirt then
+            tshirt = Instance.new("ShirtGraphic")
+            tshirt.Parent = char
+        end
+        pcall(function() tshirt.Graphic = dados.tshirtId end)
+    end
+
+    notifySucesso("Restauradas " .. restauradas .. " partes")
 end
 
 -- ============== RESTAURAR APARÊNCIA ==============
