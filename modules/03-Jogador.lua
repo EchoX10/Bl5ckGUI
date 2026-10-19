@@ -638,8 +638,9 @@ local function salvarAparencia()
                 g = parte.Color.G,
                 b = parte.Color.B
             }
-        end
-    end
+           end
+       end
+   end
 
     local shirt = char:FindFirstChildOfClass("Shirt")
     if shirt then dados.shirtId = shirt.ShirtTemplate end
