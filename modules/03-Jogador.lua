@@ -1563,5 +1563,5 @@ function BG.toggleReanimate(ativar)
 
         notifyInfo("Reanimate desligado")
     end
-end
-    print("[Jogador] Modulo carregado")
+end   
+print("[Jogador] Modulo carregado")
