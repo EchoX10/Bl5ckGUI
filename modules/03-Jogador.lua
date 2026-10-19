@@ -1195,7 +1195,7 @@ function BG.toggleReanimate(ativar)
         reanimateAtivo = true
         notifyInfo("Construindo FakeChar...")
 
-        -- 1) FakeChar via Instance.new
+        -- 1) cria FakeChar
         local model, parts = buildFakeChar()
         fakeCharModel = model
         if not parts["Torso"] then
@@ -1203,72 +1203,121 @@ function BG.toggleReanimate(ativar)
             model:Destroy(); reanimateAtivo = false; return
         end
 
-        -- 2) colisão nas partes do player via Btools
+        -- 2) posiciona o FakeChar no lugar do player (sem Btools, direto)
+        local origemRoot = CFrame.new(0, -160, 0)
+        local deslocamento = torsoP.CFrame * origemRoot:Inverse()
+        for _, part in ipairs(parts) do
+            part.CFrame = deslocamento * part.CFrame
+        end
+
+        -- 3) fixa o FakeChar ancorado onde está (o "corpo")
+        for _, part in ipairs(parts) do
+            part.Anchored = true
+        end
+
+        -- 4) colisão no player (necessário pro Btools reposicionar as peças soltas depois)
         notifyInfo("Aplicando colisao via Btools...")
         for _, v in ipairs(char:GetDescendants()) do
             if v:IsA("BasePart") then
                 pcall(function() F3X:SetCollision(v, true) end)
-                task.wait(0.05)
+                task.wait(0.02)
             end
         end
 
-        -- 3) move o FakeChar pra posição do player via Btools
-        notifyInfo("Posicionando FakeChar via Btools...")
-        local origemRoot = CFrame.new(0, -160, 0)
-        local deslocamento = torsoP.CFrame * origemRoot:Inverse()
+        -- 5) pega referência do humanoid do player
+        local humanoidPlayer = char:FindFirstChildOfClass("Humanoid")
+        local hrpPlayer = char:FindFirstChild("HumanoidRootPart")
 
-        for _, part in ipairs(parts) do
-            local destino = deslocamento * part.CFrame
-            pcall(function() F3X:Move(part, destino) end)
-            task.wait(0.08)
-        end
-
-        -- 4) BLOQUEIA RESPAWN
-        notifyInfo("Bloqueando respawn...")
-
-        -- 4.1) AutoLoads off (impede auto-respawn local)
+        -- 6) BLOQUEIA RESPAWN
         pcall(function() BG.Players.CharacterAutoLoads = false end)
 
-        -- 4.2) se o player morrer, destrói o novo char e reassume o FakeChar
-        table.insert(reanimateConns, plr.CharacterAdded:Connect(function(novoChar)
-            if not reanimateAtivo then return end
-            task.wait(0.1)
-            pcall(function() novoChar:Destroy() end)
-            if fakeCharModel and fakeCharModel.Parent then
-                pcall(function() plr.Character = fakeCharModel end)
-            end
-        end))
+        -- 7) câmera trava no FakeChar
+        local camera = workspace.CurrentCamera
+        pcall(function() camera.CameraSubject = parts["Head"] end)
 
-        -- 4.3) loop de monitoramento — re-afirma AutoLoads=false e Character=FakeChar
-        table.insert(reanimateConns, task.spawn(function()
-            while reanimateAtivo do
-                task.wait(0.3)
-                if reanimateAtivo then
-                    pcall(function() BG.Players.CharacterAutoLoads = false end)
-                    if fakeCharModel and fakeCharModel.Parent then
-                        if plr.Character ~= fakeCharModel then
-                            pcall(function() plr.Character = fakeCharModel end)
-                        end
+        -- 8) player original fica invisível + sem colisão (mas você continua "nele")
+        for _, v in ipairs(char:GetDescendants()) do
+            if v:IsA("BasePart") then
+                pcall(function() v.Transparency = 1 end)
+                pcall(function() v.CanCollide = false end)
+                pcall(function() v.CanTouch = false end)
+                pcall(function() v.CanQuery = false end)
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                pcall(function() v.Transparency = 1 end)
+            end
+        end
+        if humanoidPlayer then
+            pcall(function() humanoidPlayer.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end)
+        end
+
+        -- 9) movimento: em vez de usar o humanoide do FakeChar (que não tem ControlModule),
+        --    move o FakeChar colado no HRP do player. O player continua se movendo normalmente,
+        --    o FakeChar "segue" ele.
+        table.insert(reanimateConns, game:GetService("RunService").RenderStepped:Connect(function(dt)
+            if not reanimateAtivo then return end
+            if not fakeCharModel or not fakeCharModel.Parent then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+            -- mantém o FakeChar na posição do HRP do player
+            local novaCF = hrp.CFrame * CFrame.new(0, 0, 0)
+            local rootPart = parts["HumanoidRootPart"]
+            if rootPart then
+                local offset = rootPart.CFrame:ToObjectSpace(parts["Torso"].CFrame)
+                local alvo = novaCF * offset:Inverse()
+                for _, p in ipairs(parts) do
+                    if p.Anchored then
+                        p.CFrame = alvo * (rootPart.CFrame:ToObjectSpace(p.CFrame))
                     end
                 end
             end
         end))
 
-        -- 4.4) troca imediatamente pro FakeChar
-        task.wait(0.2)
-        pcall(function() plr.Character = fakeCharModel end)
+        -- 10) se o player morrer, esconde o novo char
+        table.insert(reanimateConns, plr.CharacterAdded:Connect(function(novoChar)
+            if not reanimateAtivo then return end
+            task.wait(0.1)
+            for _, v in ipairs(novoChar:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    pcall(function() v.Transparency = 1 end)
+                    pcall(function() v.CanCollide = false end)
+                end
+            end
+            pcall(function() BG.Players.CharacterAutoLoads = false end)
+        end))
+
+        -- 11) loop de AutoLoads
+        table.insert(reanimateConns, task.spawn(function()
+            while reanimateAtivo do
+                task.wait(0.3)
+                pcall(function() BG.Players.CharacterAutoLoads = false end)
+            end
+        end))
 
         _G.BlackGUI.FakeChar = model
         _G.BlackGUI.FakeCharParts = parts
-        notifySucesso("Reanimate ativo! Respawn bloqueado.")
+        notifySucesso("Reanimate ativo! Voce ainda controla o char original invisivel.")
 
     else
         if not reanimateAtivo then return end
         reanimateAtivo = false
 
-        -- 5) RESTAURA RESPAWN
         pcall(function() BG.Players.CharacterAutoLoads = true end)
         desconectarTudo()
+
+        -- restaura câmera no player
+        local char = plr.Character
+        if char then
+            local head = char:FindFirstChild("Head")
+            if head then pcall(function() workspace.CurrentCamera.CameraSubject = head end) end
+            for _, v in ipairs(char:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    pcall(function() v.Transparency = 0 end)
+                    pcall(function() v.CanCollide = true end)
+                    pcall(function() v.CanTouch = true end)
+                    pcall(function() v.CanQuery = true end)
+                end
+            end
+        end
 
         if fakeCharModel then
             pcall(function() fakeCharModel:Destroy() end)
@@ -1277,8 +1326,8 @@ function BG.toggleReanimate(ativar)
         _G.BlackGUI.FakeChar = nil
         _G.BlackGUI.FakeCharParts = nil
 
-        pcall(function() plr:LoadCharacter() end)
         notifyInfo("Reanimate desligado")
     end
 end
-print("[Jogador] Modulo carregado")
+
+    print("[Jogador] Modulo carregado")
