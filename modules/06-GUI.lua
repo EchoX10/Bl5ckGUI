@@ -312,6 +312,10 @@ criarBotao("Titulo BL5CK", function()
     notifySucesso("Titulo aplicado")
 end, tab4)
 
+-- ABA 6: TRANSFORMATION
+local tab6 = adicionarAba("Transformation", 6)
+criarToggle("Reanimate (FakeChar)", function(e) BG.toggleReanimate(e) end, tab6)
+
 local msgBox = Instance.new("TextBox")
 msgBox.Size = UDim2.new(1, -4, 0, 42)
 msgBox.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
