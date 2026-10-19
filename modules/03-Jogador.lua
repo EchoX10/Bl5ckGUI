@@ -1,5 +1,6 @@
 -- =========================================================
 -- MÓDULO 03 - JOGADOR (Clone, Zumbi, Tools, Tóxico, Armadilha, Reanimate)
+-- Reanimate baseado no Uhhhhhh Reanimate do STEVETHEREALONE
 -- =========================================================
 
 local BG = _G.BlackGUI
@@ -642,30 +643,22 @@ local function salvarAparencia()
 
     local shirt = char:FindFirstChildOfClass("Shirt")
     if shirt then dados.shirtId = shirt.ShirtTemplate end
-
     local pants = char:FindFirstChildOfClass("Pants")
     if pants then dados.pantsId = pants.PantsTemplate end
-
     local tshirt = char:FindFirstChildOfClass("ShirtGraphic")
     if tshirt then dados.tshirtId = tshirt.Graphic end
 
     BG._aparenciaSalva = dados
-    return true
-end
+    return trueend
 
-local function lerAparencia()
-    return BG._aparenciaSalva
-end
+local function lerAparencia() return BG._aparenciaSalva end
 
 local function aplicarMeshFeminina(seBTP, parte, meshId)
     local mesh = parte:FindFirstChildOfClass("SpecialMesh")
     if not mesh then
-        pcall(function()
-            seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
-        end)
+        pcall(function() seBTP:InvokeServer("CreateMeshes", {{Part = parte}}) end)
         task.wait(0.1)
     end
-
     pcall(function()
         seBTP:InvokeServer("SyncMesh", {{
             Part = parte,
@@ -680,20 +673,15 @@ local function aplicarTexturaEmTodasFaces(seBTP, parte, textureId)
     for _, face in ipairs(TODAS_FACES) do
         pcall(function()
             seBTP:InvokeServer("CreateTextures", {{
-                Part = parte,
-                Face = face,
-                TextureType = "Decal"
+                Part = parte, Face = face, TextureType = "Decal"
             }})
         end)
     end
     task.wait(0.1)
-
     for _, face in ipairs(TODAS_FACES) do
         pcall(function()
             seBTP:InvokeServer("SyncTexture", {{
-                Part = parte,
-                Face = face,
-                TextureType = "Decal",
+                Part = parte, Face = face, TextureType = "Decal",
                 Texture = "rbxassetid://" .. textureId
             }})
         end)
@@ -710,24 +698,19 @@ end
 function BG.botaoFeminizar()
     local char = plr.Character
     if not char then notifyErro("Character não encontrado") return end
-
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not humanoid then notifyErro("Humanoid não encontrado") return end
-
     if humanoid.RigType ~= Enum.HumanoidRigType.R6 then
         notifyErro("Esta função só funciona em R6")
         notifyInfo("Muda teu avatar pra R6 nas configurações do Roblox")
         return
     end
-
     local seBTP = getFork3XEndpoint()
     if not seBTP then notifyErro("Building Tools+ não equipada") return end
 
     salvarAparencia()
-
     notifyInfo("Aplicando meshes femininas...")
     local aplicadas = 0
-
     for nomeParte, meshId in pairs(MESHES_FEMININO) do
         local parte = char:FindFirstChild(nomeParte)
         if parte and parte:IsA("BasePart") then
@@ -742,7 +725,6 @@ function BG.botaoFeminizar()
     if dados then
         local shirtId = extrairIdDaUrl(dados.shirtId)
         local pantsId = extrairIdDaUrl(dados.pantsId)
-
         if pantsId then
             for _, nomeParte in ipairs({"Left Leg", "Right Leg"}) do
                 local parte = char:FindFirstChild(nomeParte)
@@ -752,7 +734,6 @@ function BG.botaoFeminizar()
                 end
             end
         end
-
         if shirtId then
             for _, nomeParte in ipairs({"Torso", "Left Arm", "Right Arm"}) do
                 local parte = char:FindFirstChild(nomeParte)
@@ -774,10 +755,8 @@ end
 function BG.botaoRestaurarAparencia()
     local char = plr.Character
     if not char then notifyErro("Character não encontrado") return end
-
     local seBTP = getFork3XEndpoint()
     if not seBTP then notifyErro("Building Tools+ não equipada") return end
-
     local dados = lerAparencia()
     if not dados then
         notifyErro("Nenhum save encontrado")
@@ -787,23 +766,17 @@ function BG.botaoRestaurarAparencia()
 
     notifyInfo("Restaurando aparência...")
     task.wait(0.3)
-
     local restauradas = 0
 
     for nomeParte, dadosParte in pairs(dados.meshes) do
         local parte = char:FindFirstChild(nomeParte)
         if parte and parte:IsA("BasePart") then
             local mesh = parte:FindFirstChildOfClass("SpecialMesh")
-
             if dadosParte.meshId == "" then
-                if mesh then
-                    pcall(function() mesh:Destroy() end)
-                end
+                if mesh then pcall(function() mesh:Destroy() end) end
                 restauradas = restauradas + 1
             else
-                pcall(function()
-                    seBTP:InvokeServer("CreateMeshes", {{Part = parte}})
-                end)
+                pcall(function() seBTP:InvokeServer("CreateMeshes", {{Part = parte}}) end)
                 task.wait(0.1)
                 pcall(function()
                     seBTP:InvokeServer("SyncMesh", {{
@@ -821,41 +794,53 @@ function BG.botaoRestaurarAparencia()
 
     if dados.shirtId then
         local shirt = char:FindFirstChildOfClass("Shirt")
-        if not shirt then
-            shirt = Instance.new("Shirt")
-            shirt.Parent = char
-        end
+        if not shirt then shirt = Instance.new("Shirt") shirt.Parent = char end
         pcall(function() shirt.ShirtTemplate = dados.shirtId end)
     end
-
     if dados.pantsId then
         local pants = char:FindFirstChildOfClass("Pants")
-        if not pants then
-            pants = Instance.new("Pants")
-            pants.Parent = char
-        end
+        if not pants then pants = Instance.new("Pants") pants.Parent = char end
         pcall(function() pants.PantsTemplate = dados.pantsId end)
     end
 
     notifySucesso("Restauradas " .. restauradas .. " partes")
 end
 
--- ============== REANIMATE ==============
-local reanimateAtivo = false
-local fakeCharModel = nil
-local reanimateConns = {}
-local _loadAnimationHookAtivo = false
+-- =========================================================
+-- REANIMATE (baseado no Uhhhhhh Reanimate do STEVETHEREALONE)
+-- =========================================================
 
-local function ativarHookLoadAnimation()
-    if _loadAnimationHookAtivo then return end
+local reanimateAtivo = false
+local reanimateConn = nil
+local reanimateTask = nil
+
+-- variáveis de controle
+local REANIM = {
+    Character = nil,
+    Camera = workspace.CurrentCamera,
+    WalkSpeed = 16,
+    JumpPower = 50,
+    Control = {
+        Move = Vector3.zero,
+        Jump = false,
+    },
+    CameraSubject = nil,
+    Started = false,
+}
+
+-- hook de LoadAnimation (bloqueia anims no char original)
+local _loadHookAtivo = false
+local _loadHookOriginal = nil
+local function ativarHookLA()
+    if _loadHookAtivo then return end
     if type(hookmetamethod) ~= "function" or type(newcclosure) ~= "function" then return end
-    _loadAnimationHookAtivo = true
+    _loadHookAtivo = true
     local mt = getrawmetatable(game)
     local oldNamecall = mt.__namecall
     setreadonly(mt, false)
     mt.__namecall = newcclosure(function(self, ...)
         local method = getnamecallmethod()
-        if _loadAnimationHookAtivo and (method == "LoadAnimation" or method == "loadAnimation") then
+        if _loadHookAtivo and (method == "LoadAnimation" or method == "loadAnimation") then
             if not checkcaller() and typeof(self) == "Instance" and (self:IsA("Humanoid") or self:IsA("Animator")) then
                 return nil
             end
@@ -865,71 +850,125 @@ local function ativarHookLoadAnimation()
     setreadonly(mt, true)
 end
 
-local function desativarHookLoadAnimation()
-    _loadAnimationHookAtivo = false
+local function desativarHookLA()
+    _loadHookAtivo = false
 end
 
-local FAKE_CHAR_BLUEPRINT = {
-  Descendants = {
-    { Name = "Right Arm"; ClassName = "Part"; CFrame = CFrame.new(-1.5, 11, 0); Size = Vector3.new(1,2,1); Color = Color3.fromRGB(255,0,0); Transparency = 0.5; },
-    { Name = "Head"; ClassName = "Part"; CFrame = CFrame.new(0, 12.5, 0); Size = Vector3.new(2,1,1); Color = Color3.fromRGB(255,0,0); Transparency = 0.5; },
-    { Name = "Left Arm"; ClassName = "Part"; CFrame = CFrame.new(1.5, 11, 0); Size = Vector3.new(1,2,1); Color = Color3.fromRGB(255,0,0); Transparency = 0.5; },
-    { Name = "Torso"; ClassName = "Part"; CFrame = CFrame.new(0, 11, 0); Size = Vector3.new(2,2,1); Color = Color3.fromRGB(255,0,0); Transparency = 0.5; },
-    { Name = "HumanoidRootPart"; ClassName = "Part"; CFrame = CFrame.new(0, 11, 0); Size = Vector3.new(2,2,1); Transparency = 1; },
-    { Name = "Right Leg"; ClassName = "Part"; CFrame = CFrame.new(0.5, 9, 0); Size = Vector3.new(1,2,1); Color = Color3.fromRGB(255,0,0); Transparency = 0.5; },
-    { Name = "Left Leg"; ClassName = "Part"; CFrame = CFrame.new(-0.5, 9, 0); Size = Vector3.new(1,2,1); Color = Color3.fromRGB(255,0,0); Transparency = 0.5; },
-    { Name = "Right Shoulder"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Right Arm"; C0 = CFrame.new(1,0.5,0) * CFrame.Angles(0,0,math.rad(-90)); C1 = CFrame.new(2.5,0.5,0) * CFrame.Angles(0,0,math.rad(-90)); },
-    { Name = "Left Shoulder"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Left Arm"; C0 = CFrame.new(-1,0.5,0) * CFrame.Angles(0,0,math.rad(90)); C1 = CFrame.new(-2.5,0.5,0) * CFrame.Angles(0,0,math.rad(90)); },
-    { Name = "Neck"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Head"; C0 = CFrame.new(0,1,0) * CFrame.Angles(0,math.rad(180),math.rad(180)); C1 = CFrame.new(0,-0.5,0) * CFrame.Angles(0,math.rad(180),math.rad(180)); },
-    { Name = "Right Hip"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Right Leg"; C0 = CFrame.new(1,-1,0) * CFrame.Angles(0,0,math.rad(-90)); C1 = CFrame.new(0.5,1,0) * CFrame.Angles(0,0,math.rad(-90)); },
-    { Name = "Left Hip"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Left Leg"; C0 = CFrame.new(-1,-1,0) * CFrame.Angles(0,0,math.rad(90)); C1 = CFrame.new(-0.5,1,0) * CFrame.Angles(0,0,math.rad(90)); },
-    { Name = "RootJoint"; ClassName = "Motor6D"; Part0 = "HumanoidRootPart"; Part1 = "Torso"; C0 = CFrame.Angles(0,math.rad(180),math.rad(180)); C1 = CFrame.Angles(0,math.rad(180),math.rad(180)); },
-    { Name = "Humanoid"; ClassName = "Humanoid"; },
-  };
-}
-
-local function buildFakeChar()
+-- cria o FakeChar (R6 padrão, blueprint completo)
+local function criarFakeChar()
     local model = Instance.new("Model")
     model.Name = "BL5CK_FakeChar"
     model.Parent = workspace
+
     local parts = {}
-    local deferred = {}
-    for _, d in ipairs(FAKE_CHAR_BLUEPRINT.Descendants) do
-        if d.ClassName == "Part" then
-            local p = Instance.new("Part")
-            p.Name = d.Name
-            p.Anchored = true
-            p.CanCollide = false
-            p.Size = d.Size
-            p.CFrame = d.CFrame + Vector3.new(0, -160, 0)
-            p.Color = d.Color or Color3.new(1,1,1)
-            p.Transparency = d.Transparency or 0
-            p.Parent = model
-            parts[d.Name] = p
-        else
-            table.insert(deferred, d)
-        end
+
+    local function mkPart(name, size, color, transparency)
+        local p = Instance.new("Part")
+        p.Name = name
+        p.Size = size
+        p.Color = color
+        p.Transparency = transparency or 0
+        p.CanCollide = false
+        p.CanTouch = false
+        p.CanQuery = false
+        p.Anchored = true
+        p.Parent = model
+        parts[name] = p
+        return p
     end
-    for _, d in ipairs(deferred) do
-        if d.ClassName == "Motor6D" then
-            local m = Instance.new("Motor6D")
-            m.Name = d.Name
-            m.Part0 = parts[d.Part0]
-            m.Part1 = parts[d.Part1]
-            m.C0 = d.C0
-            m.C1 = d.C1
-            m.Parent = parts[d.Part0] or model
-        elseif d.ClassName == "Humanoid" then
-            local h = Instance.new("Humanoid")
-            h.RigType = Enum.HumanoidRigType.R6
-            h.BreakJointsOnDeath = false
-            h.Parent = model
-        end
+
+    local root = mkPart("HumanoidRootPart", Vector3.new(2,2,1), Color3.fromRGB(163,162,165), 1)
+    local torso = mkPart("Torso", Vector3.new(2,2,1), Color3.fromRGB(255,0,0), 0.5)
+    local head = mkPart("Head", Vector3.new(2,1,1), Color3.fromRGB(255,0,0), 0.5)
+    local larm = mkPart("Left Arm", Vector3.new(1,2,1), Color3.fromRGB(255,0,0), 0.5)
+    local rarm = mkPart("Right Arm", Vector3.new(1,2,1), Color3.fromRGB(255,0,0), 0.5)
+    local lleg = mkPart("Left Leg", Vector3.new(1,2,1), Color3.fromRGB(255,0,0), 0.5)
+    local rleg = mkPart("Right Leg", Vector3.new(1,2,1), Color3.fromRGB(255,0,0), 0.5)
+
+    -- meshes
+    local mHead = Instance.new("SpecialMesh")
+    mHead.Name = "Mesh"
+    mHead.MeshType = Enum.MeshType.Head
+    mHead.Scale = Vector3.new(1.25,1.25,1.25)
+    mHead.Parent = head
+
+    local mTorso = Instance.new("SpecialMesh")
+    mTorso.Name = "Mesh"
+    mTorso.MeshType = Enum.MeshType.Torso
+    mTorso.Parent = torso
+
+    local mRLeg = Instance.new("SpecialMesh")
+    mRLeg.Name = "Mesh"
+    mRLeg.MeshType = Enum.MeshType.Torso
+    mRLeg.Parent = rleg
+
+    local mLLeg = Instance.new("SpecialMesh")
+    mLLeg.Name = "Mesh"
+    mLLeg.MeshType = Enum.MeshType.Torso
+    mLLeg.Parent = lleg
+
+    -- decal face
+    local face = Instance.new("Decal")
+    face.Name = "Face"
+    face.Texture = "rbxthumb://type=Asset&id=3112638914&w=420&h=420"
+    face.Face = Enum.NormalId.Front
+    face.Parent = head
+
+    -- humanoid
+    local hum = Instance.new("Humanoid")
+    hum.RigType = Enum.HumanoidRigType.R6
+    hum.BreakJointsOnDeath = false
+    hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+    hum.MaxHealth = 100
+    hum.Health = 100
+    hum.WalkSpeed = 16
+    hum.JumpPower = 50
+    hum.Parent = model
+
+    local animator = Instance.new("Animator")
+    animator.Parent = hum
+
+    -- Motor6D (C0/C1 igual ao R6 padrão)
+    local function motor(name, p0, p1, c0, c1)
+        local m = Instance.new("Motor6D")
+        m.Name = name
+        m.Part0 = p0
+        m.Part1 = p1
+        m.C0 = c0
+        m.C1 = c1
+        m.Parent = p0
+        return m
     end
-    model.PrimaryPart = parts["HumanoidRootPart"]
+
+    motor("RootJoint", root, torso,
+        CFrame.new(0,0,0, -1,0,0, 0,0,1, 0,1,0),
+        CFrame.new(0,0,0, -1,0,0, 0,0,1, 0,1,0))
+    motor("Neck", torso, head,
+        CFrame.new(0,1,0, -1,0,0, 0,0,1, 0,1,0),
+        CFrame.new(0,-0.5,0, -1,0,0, 0,0,1, 0,1,0))
+    motor("Left Shoulder", torso, larm,
+        CFrame.new(-1,0.5,0, 0,0,-1, 0,1,0, 1,0,0),
+        CFrame.new(0.5,0.5,0, 0,0,-1, 0,1,0, 1,0,0))
+    motor("Right Shoulder", torso, rarm,
+        CFrame.new(1,0.5,0, 0,0,1, 0,1,0, -1,0,0),
+        CFrame.new(-0.5,0.5,0, 0,0,1, 0,1,0, -1,0,0))
+    motor("Left Hip", torso, lleg,
+        CFrame.new(-1,-1,0, 0,0,-1, 0,1,0, 1,0,0),
+        CFrame.new(-0.5,1,0, 0,0,-1, 0,1,0, 1,0,0))
+    motor("Right Hip", torso, rleg,
+        CFrame.new(1,-1,0, 0,0,1, 0,1,0, -1,0,0),
+        CFrame.new(0.5,1,0, 0,0,1, 0,1,0, -1,0,0))
+
+    model.PrimaryPart = root
     return model, parts
 end
 
+-- estiliza CFrames do Motor6D do fake char pra bater com o player original
+local function aplicarMotor6DnoPlayer(fakeChar)
+    -- (não usado — motor já vem certo)
+end
+
+-- ============== TOGGLE REANIMATE ==============
 function BG.toggleReanimate(ativar)
     if ativar then
         if reanimateAtivo then return end
@@ -942,279 +981,273 @@ function BG.toggleReanimate(ativar)
         reanimateAtivo = true
         notifyInfo("Construindo FakeChar...")
 
-        local model, parts = buildFakeChar()
-        fakeCharModel = model
-        if not parts["Torso"] then
-            notifyErro("FakeChar sem Torso!")
-            model:Destroy(); reanimateAtivo = false; return
+        -- 1) cria FakeChar no chão do player
+        local model, parts = criarFakeChar()
+        REANIM.Character = model
+
+        local basePos = hrpP.Position + Vector3.new(0, 0.5, 0)
+        local baseCF = CFrame.new(basePos)
+        for name, p in pairs(parts) do
+            p.CFrame = baseCF * CFrame.new(0, 0, 0)
         end
+        -- posiciona cada parte no offset certo
+        parts["HumanoidRootPart"].CFrame = baseCF
+        parts["Torso"].CFrame = baseCF
+        parts["Head"].CFrame = baseCF * CFrame.new(0, 1.5, 0)
+        parts["Left Arm"].CFrame = baseCF * CFrame.new(-1.5, 0, 0)
+        parts["Right Arm"].CFrame = baseCF * CFrame.new(1.5, 0, 0)
+        parts["Left Leg"].CFrame = baseCF * CFrame.new(-0.5, -2, 0)
+        parts["Right Leg"].CFrame = baseCF * CFrame.new(0.5, -2, 0)
 
-        local desloc = CFrame.new(hrpP.Position + Vector3.new(0, -0.5, 0)) * CFrame.new(0, -160, 0):Inverse()
-        for _, p in ipairs(parts) do p.CFrame = desloc * p.CFrame end
+        -- 2) hook de anim
+        ativarHookLA()
 
-        ativarHookLoadAnimation()
-
-        -- esconde o char original
+        -- 3) esconde só o CORPO do player original (mantém acessórios)
+        local CORPO = {
+            ["Head"] = true, ["Torso"] = true,
+            ["Left Arm"] = true, ["Right Arm"] = true,
+            ["Left Leg"] = true, ["Right Leg"] = true,
+            ["HumanoidRootPart"] = true,
+        }
         local origState = { Transparency = {}, CanCollide = {} }
         for _, v in ipairs(char:GetDescendants()) do
-            if v:IsA("BasePart") then
+            if v:IsA("BasePart") and CORPO[v.Name] then
                 origState.Transparency[v] = v.Transparency
                 origState.CanCollide[v] = v.CanCollide
                 v.Transparency = 1
                 v.CanCollide = false
-            elseif v:IsA("Decal") or v:IsA("Texture") then
-                origState.Transparency[v] = v.Transparency
-                v.Transparency = 1
+                v.CanTouch = false
+                v.CanQuery = false
             end
         end
-        _G.BlackGUI._reanimateOrigState = origState
+        _G.BlackGUI._reanimOrig = origState
 
-        local camera = workspace.CurrentCamera
-        local RS = game:GetService("RunService")
-        local UIS = game:GetService("UserInputService")
-        local fakeHumP = model:FindFirstChildOfClass("Humanoid")
-        local rootPart = parts["HumanoidRootPart"]
-
-        -- ============== CÂMERA ==============
-        if fakeHumP then
-            pcall(function()
-                camera.CameraSubject = fakeHumP
-                fakeHumP.CameraOffset = Vector3.zero
-            end)
-        end
-
-        table.insert(reanimateConns, RS.RenderStepped:Connect(function()
-            if not reanimateAtivo then return end
-            if fakeHumP and fakeHumP.Parent and camera.CameraSubject ~= fakeHumP then
-                camera.CameraSubject = fakeHumP
-            end
-        end))
-
-        -- ============== HRP DO PLAYER NO VOID ==============
+        -- 4) HRP do player pro void
         local VOID_Y = -50000
         hrpP.Anchored = false
         hrpP.CFrame = CFrame.new(hrpP.Position.X, VOID_Y, hrpP.Position.Z)
 
-        table.insert(reanimateConns, RS.Heartbeat:Connect(function()
-            if not reanimateAtivo or not hrpP or not hrpP.Parent then return end
-            hrpP.CFrame = CFrame.new(hrpP.Position.X, VOID_Y, hrpP.Position.Z)
-            hrpP.AssemblyLinearVelocity = Vector3.zero
-            hrpP.AssemblyAngularVelocity = Vector3.zero
-            if humP.Health > 0 then humP.Health = 100 end
-        end))
+        -- 5) camera
+        local fakeHum = model:FindFirstChildOfClass("Humanoid")
+        local camera = workspace.CurrentCamera
+        REANIM.Camera = camera
 
-        -- ============== PARTES SEM COLISÃO EM LOOP ==============
-        table.insert(reanimateConns, RS.Heartbeat:Connect(function()
-            if not reanimateAtivo then return end
-            if not fakeCharModel or not fakeCharModel.Parent then return end
-            for _, p in ipairs(fakeCharModel:GetChildren()) do
-                if p:IsA("BasePart") then
-                    p.CanCollide = false
-                    p.CanTouch = false
+        -- 6) roda o loop principal (estilo Uhhhhhh)
+        reanimateTask = task.spawn(function()
+            local RunService = game:GetService("RunService")
+            local UIS = game:GetService("UserInputService")
+
+            -- estados do Humanoid do FakeChar
+            if fakeHum then
+                pcall(function() fakeHum.EvaluateStateMachine = false end)
+                pcall(function() fakeHum:ChangeState(Enum.HumanoidStateType.Physics) end)
+            end
+
+            -- câmera
+            if fakeHum then
+                pcall(function() camera.CameraSubject = fakeHum end)
+            end
+
+            -- input mobile
+            local touchGui = playerGui:FindFirstChild("TouchGui")
+            local touchFrame = touchGui and touchGui:FindFirstChild("TouchControlFrame")
+            local thumbstick = touchFrame and (touchFrame:FindFirstChild("DynamicThumbstickFrame") or touchFrame:FindFirstChild("ThumbstickFrame"))
+            local jumpButton = touchFrame and touchFrame:FindFirstChild("JumpButton")
+
+            local mobileMove = Vector3.zero
+            local mobileJump = false
+            local thumbstickTouch = nil
+            local jumpTouch = nil
+
+            local function getArea(btn)
+                if not btn then return nil end
+                return btn.AbsolutePosition, btn.AbsolutePosition + btn.AbsoluteSize
+            end
+            local function inside(pos, tl, br)
+                return pos.X >= tl.X and pos.Y >= tl.Y and pos.X <= br.X and pos.Y <= br.Y
+            end
+
+            local connInputBegan = UIS.InputBegan:Connect(function(input, gpe)
+                if not reanimateAtivo then return end
+                if input.UserInputType ~= Enum.UserInputType.Touch then return end
+                if gpe then return end
+                if UIS:GetFocusedTextBox() then return end
+                local tl, br = getArea(thumbstick)
+                if tl and inside(input.Position, tl, br) then
+                    if not thumbstickTouch then
+                        thumbstickTouch = { input = input, startPos = input.Position }
+                    end
+                    return
                 end
-            end
-        end))
-
-        -- ============== INPUT MOBILE ==============
-        local touchGui = playerGui:FindFirstChild("TouchGui")
-        local touchFrame = touchGui and touchGui:FindFirstChild("TouchControlFrame")
-        local thumbstick = touchFrame and (touchFrame:FindFirstChild("DynamicThumbstickFrame") or touchFrame:FindFirstChild("ThumbstickFrame"))
-        local jumpButton = touchFrame and touchFrame:FindFirstChild("JumpButton")
-
-        local mobileMove = Vector3.zero
-        local mobileJump = false
-        local thumbstickTouch = nil
-        local jumpTouch = nil
-
-        local function getThumbstickArea()
-            if not thumbstick then return nil end
-            local pos = thumbstick.AbsolutePosition
-            local size = thumbstick.AbsoluteSize
-            return pos, pos + size
-        end
-
-        local function getJumpArea()
-            if not jumpButton then return nil end
-            local pos = jumpButton.AbsolutePosition
-            local size = jumpButton.AbsoluteSize
-            return pos, pos + size
-        end
-
-        local function isInside(pos, tl, br)
-            return pos.X >= tl.X and pos.Y >= tl.Y and pos.X <= br.X and pos.Y <= br.Y
-        end
-
-        table.insert(reanimateConns, UIS.InputBegan:Connect(function(input, gpe)
-            if not reanimateAtivo then return end
-            if input.UserInputType ~= Enum.UserInputType.Touch then return end
-            if gpe then return end
-            if UIS:GetFocusedTextBox() then return end
-
-            local tl, br = getThumbstickArea()
-            if tl and isInside(input.Position, tl, br) then
-                if not thumbstickTouch then
-                    thumbstickTouch = { input = input, startPos = input.Position }
+                tl, br = getArea(jumpButton)
+                if tl and inside(input.Position, tl, br) then
+                    if not jumpTouch then jumpTouch = input mobileJump = true end
                 end
-                return
-            end
-
-            tl, br = getJumpArea()
-            if tl and isInside(input.Position, tl, br) then
-                if not jumpTouch then
-                    jumpTouch = input
-                    mobileJump = true
-                end
-            end
-        end))
-
-        table.insert(reanimateConns, UIS.InputChanged:Connect(function(input, gpe)
-            if not reanimateAtivo then return end
-            if input.UserInputType ~= Enum.UserInputType.Touch then return end
-            if not thumbstickTouch or thumbstickTouch.input ~= input then return end
-
-            local delta = input.Position - thumbstickTouch.startPos
-            local stickRadius = 40
-            if math.min(camera.ViewportSize.X, camera.ViewportSize.Y) < 500 then
-                stickRadius = 25
-            end
-
-            local mag = delta.Magnitude
-            if mag > stickRadius then
-                delta = delta.Unit * stickRadius
-            end
-
-            local nx = delta.X / stickRadius
-            local ny = delta.Y / stickRadius
-
-            if math.abs(nx) < 0.15 then nx = 0 end
-            if math.abs(ny) < 0.15 then ny = 0 end
-
-            mobileMove = Vector3.new(nx, 0, ny)
-        end))
-
-        table.insert(reanimateConns, UIS.InputEnded:Connect(function(input)
-            if not reanimateAtivo then return end
-            if input.UserInputType ~= Enum.UserInputType.Touch then return end
-
-            if thumbstickTouch and thumbstickTouch.input == input then
-                thumbstickTouch = nil
-                mobileMove = Vector3.zero
-            end
-
-            if jumpTouch == input then
-                jumpTouch = nil
-                mobileJump = false
-            end
-        end))
-
-        -- ============== MOVIMENTO ==============
-        local WALK_SPEED = 16
-        local onGround = false
-        local jumpCd = 0
-
-        table.insert(reanimateConns, RS.PreSimulation:Connect(function(dt)
-            if not reanimateAtivo then return end
-            if not rootPart or not rootPart.Parent or not fakeHumP or not fakeHumP.Parent then return end
-
-            local mv = Vector3.zero
-            local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
-
-            if isMobile then
-                mv = Vector3.new(mobileMove.X, 0, mobileMove.Z)
-                if mobileJump and onGround and os.clock() > jumpCd then
-                    fakeHumP.Jump = true
-                    onGround = false
-                    jumpCd = os.clock() + 0.2
-                end
-            else
-                if UIS:IsKeyDown(Enum.KeyCode.W) then mv += Vector3.new(0,0,-1) end
-                if UIS:IsKeyDown(Enum.KeyCode.S) then mv += Vector3.new(0,0,1) end
-                if UIS:IsKeyDown(Enum.KeyCode.A) then mv += Vector3.new(-1,0,0) end
-                if UIS:IsKeyDown(Enum.KeyCode.D) then mv += Vector3.new(1,0,0) end
-                if UIS:IsKeyDown(Enum.KeyCode.Space) and onGround and os.clock() > jumpCd then
-                    fakeHumP.Jump = true
-                    onGround = false
-                    jumpCd = os.clock() + 0.2
-                end
-            end
-            if mv.Magnitude > 1 then mv = mv.Unit end
-
-            -- transforma input local em direção no mundo baseado na câmera
-            local cL = camera.CFrame.LookVector
-            local cR = camera.CFrame.RightVector
-            local fL = Vector3.new(cL.X, 0, cL.Z)
-            if fL.Magnitude > 0.01 then fL = fL.Unit end
-            local fR = Vector3.new(cR.X, 0, cR.Z)
-            if fR.Magnitude > 0.01 then fR = fR.Unit end
-            local worldDir = fL * -mv.Z + fR * mv.X
-            if worldDir.Magnitude > 1 then worldDir = worldDir.Unit end
-
-            fakeHumP.WalkSpeed = WALK_SPEED
-            fakeHumP:Move(worldDir)
-
-            local rp = RaycastParams.new()
-            rp.FilterDescendantsInstances = { model }
-            rp.FilterType = Enum.RaycastFilterType.Exclude
-            local hit = workspace:Raycast(rootPart.Position, Vector3.new(0, -4, 0), rp)
-            onGround = hit ~= nil
-
-            pcall(function()
-                sethiddenproperty(fakeHumP, "NetworkHumanoidState", Enum.HumanoidStateType.Freefall.Value)
             end)
 
-            if worldDir.Magnitude > 0.01 then
-                pcall(function()
-                    sethiddenproperty(fakeHumP, "MoveDirectionInternal", worldDir * WALK_SPEED)
-                end)
-            else
-                pcall(function()
-                    sethiddenproperty(fakeHumP, "MoveDirectionInternal", Vector3.zero)
-                end)
+            local connInputChanged = UIS.InputChanged:Connect(function(input)
+                if not reanimateAtivo then return end
+                if input.UserInputType ~= Enum.UserInputType.Touch then return end
+                if not thumbstickTouch or thumbstickTouch.input ~= input then return end
+                local delta = input.Position - thumbstickTouch.startPos
+                local stickRadius = 40
+                if math.min(camera.ViewportSize.X, camera.ViewportSize.Y) < 500 then stickRadius = 25 end
+                if delta.Magnitude > stickRadius then delta = delta.Unit * stickRadius end
+                local nx, ny = delta.X / stickRadius, delta.Y / stickRadius
+                if math.abs(nx) < 0.15 then nx = 0 end
+                if math.abs(ny) < 0.15 then ny = 0 end
+                mobileMove = Vector3.new(nx, 0, ny)
+            end)
+
+            local connInputEnded = UIS.InputEnded:Connect(function(input)
+                if not reanimateAtivo then return end
+                if input.UserInputType ~= Enum.UserInputType.Touch then return end
+                if thumbstickTouch and thumbstickTouch.input == input then
+                    thumbstickTouch = nil
+                    mobileMove = Vector3.zero
+                end
+                if jumpTouch == input then jumpTouch = nil mobileJump = false end
+            end)
+
+            local onGround = false
+            local jumpCd = 0
+
+            -- loop principal
+            while reanimateAtivo do
+                local dt = RunService.PreSimulation:Wait()
+                if not reanimateAtivo then break end
+
+                -- câmera
+                if fakeHum and fakeHum.Parent and camera.CameraSubject ~= fakeHum then
+                    camera.CameraSubject = fakeHum
+                end
+
+                -- HRP do player no void
+                if hrpP and hrpP.Parent then
+                    hrpP.CFrame = CFrame.new(hrpP.Position.X, VOID_Y, hrpP.Position.Z)
+                    hrpP.AssemblyLinearVelocity = Vector3.zero
+                    hrpP.AssemblyAngularVelocity = Vector3.zero
+                    if humP and humP.Health > 0 then humP.Health = 100 end
+                end
+
+                -- input
+                local mv = Vector3.zero
+                local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+
+                if isMobile then
+                    mv = Vector3.new(mobileMove.X, 0, mobileMove.Z)
+                    if mobileJump and onGround and os.clock() > jumpCd then
+                        if fakeHum then fakeHum.Jump = true end
+                        onGround = false
+                        jumpCd = os.clock() + 0.2
+                    end
+                else
+                    if UIS:IsKeyDown(Enum.KeyCode.W) then mv += Vector3.new(0,0,-1) end
+                    if UIS:IsKeyDown(Enum.KeyCode.S) then mv += Vector3.new(0,0,1) end
+                    if UIS:IsKeyDown(Enum.KeyCode.A) then mv += Vector3.new(-1,0,0) end
+                    if UIS:IsKeyDown(Enum.KeyCode.D) then mv += Vector3.new(1,0,0) end
+                    if UIS:IsKeyDown(Enum.KeyCode.Space) and onGround and os.clock() > jumpCd then
+                        if fakeHum then fakeHum.Jump = true end
+                        onGround = false
+                        jumpCd = os.clock() + 0.2
+                    end
+                end
+                if mv.Magnitude > 1 then mv = mv.Unit end
+
+                -- direção no mundo
+                local cL = camera.CFrame.LookVector
+                local cR = camera.CFrame.RightVector
+                local fL = Vector3.new(cL.X, 0, cL.Z)
+                if fL.Magnitude > 0.01 then fL = fL.Unit end
+                local fR = Vector3.new(cR.X, 0, cR.Z)
+                if fR.Magnitude > 0.01 then fR = fR.Unit end
+                local worldDir = fL * -mv.Z + fR * mv.X
+                if worldDir.Magnitude > 1 then worldDir = worldDir.Unit end
+
+                if fakeHum then
+                    fakeHum.WalkSpeed = 16
+                    fakeHum:Move(worldDir)
+                end
+
+                -- raycast chão
+                local rp = RaycastParams.new()
+                rp.FilterDescendantsInstances = { model }
+                rp.FilterType = Enum.RaycastFilterType.Exclude
+                local root = parts["HumanoidRootPart"]
+                if root and root.Parent then
+                    local hit = workspace:Raycast(root.Position, Vector3.new(0, -4, 0), rp)
+                    onGround = hit ~= nil
+                end
+
+                -- força estado no servidor
+                if fakeHum then
+                    pcall(function()
+                        sethiddenproperty(fakeHum, "NetworkHumanoidState", Enum.HumanoidStateType.Freefall.Value)
+                    end)
+                    if worldDir.Magnitude > 0.01 then
+                        pcall(function()
+                            sethiddenproperty(fakeHum, "MoveDirectionInternal", worldDir * 16)
+                        end)
+                    else
+                        pcall(function()
+                            sethiddenproperty(fakeHum, "MoveDirectionInternal", Vector3.zero)
+                        end)
+                    end
+                end
             end
 
-            if rootPart.Position.Y < -10000 then
-                rootPart.CFrame = CFrame.new(hrpP.Position.X, hrpP.Position.Y + 10, hrpP.Position.Z)
-            end
-        end))
+            connInputBegan:Disconnect()
+            connInputChanged:Disconnect()
+            connInputEnded:Disconnect()
+        end)
 
         _G.BlackGUI.FakeChar = model
         _G.BlackGUI.FakeCharParts = parts
         notifySucesso("Reanimate ativo! Use WASD / joystick.")
+
     else
         if not reanimateAtivo then return end
         reanimateAtivo = false
+
+        if reanimateTask then
+            pcall(function() task.cancel(reanimateTask) end)
+            reanimateTask = nil
+        end
+
+        desativarHookLA()
+
+        -- restaura player
         local char = plr.Character
         if char then
             local humP = char:FindFirstChildOfClass("Humanoid")
             local hrpP = char:FindFirstChild("HumanoidRootPart")
             if humP then humP.Health = 100 end
-            if hrpP then
+            if hrpP and _G.BlackGUI.FakeCharParts then
                 hrpP.Anchored = false
-                if _G.BlackGUI.FakeCharParts and _G.BlackGUI.FakeCharParts["HumanoidRootPart"] then
-                    hrpP.CFrame = CFrame.new(_G.BlackGUI.FakeCharParts["HumanoidRootPart"].Position + Vector3.new(0,5,0))
+                local root = _G.BlackGUI.FakeCharParts["HumanoidRootPart"]
+                if root then
+                    hrpP.CFrame = CFrame.new(root.Position + Vector3.new(0, 5, 0))
                 end
             end
-            local o = _G.BlackGUI._reanimateOrigState
+            local o = _G.BlackGUI._reanimOrig
             if o then
-                for _, v in ipairs(char:GetDescendants()) do
-                    if v:IsA("BasePart") then
-                        v.Transparency = o.Transparency[v] or 0
-                        v.CanCollide = o.CanCollide[v] ~= false
-                    elseif v:IsA("Decal") or v:IsA("Texture") then
-                        v.Transparency = o.Transparency[v] or 0
-                    end
+                for v, t in pairs(o.Transparency) do
+                    if v.Parent then v.Transparency = t end
+                end
+                for v, c in pairs(o.CanCollide) do
+                    if v.Parent then v.CanCollide = c end
                 end
             end
         end
-        desativarHookLoadAnimation()
-        for _, c in ipairs(reanimateConns) do
-            pcall(function() if typeof(c) == "RBXScriptConnection" then c:Disconnect() end end)
+
+        if REANIM.Character then
+            pcall(function() REANIM.Character:Destroy() end)
+            REANIM.Character = nil
         end
-        reanimateConns = {}
-        if fakeCharModel then pcall(function() fakeCharModel:Destroy() end); fakeCharModel = nil end
+
         _G.BlackGUI.FakeChar = nil
         _G.BlackGUI.FakeCharParts = nil
-        _G.BlackGUI._reanimateOrigState = nil
+        _G.BlackGUI._reanimOrig = nil
         notifyInfo("Reanimate desligado")
     end
 end
