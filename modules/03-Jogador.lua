@@ -1072,4 +1072,118 @@ function BG.botaoRestaurarAparencia()
 
     notifySucesso("Restauradas " .. restauradas .. " partes")
 end
+
+function BG.toggleReanimate(ativar)
+    if ativar then
+        if reanimateAtivo then return end
+        local seBTP = getFork3XEndpoint()
+        if not seBTP then notifyErro("Building Tools+ nao encontrada!") return end
+        local char = plr.Character
+        if not char then notifyErro("Character nao encontrado!") return end
+        local torsoP = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+        if not torsoP then notifyErro("Torso do player nao encontrado!") return end
+
+        reanimateAtivo = true
+        notifyInfo("Construindo FakeChar...")
+
+        -- 1) FakeChar via Instance.new
+        local model, parts = buildFakeChar()
+        fakeCharModel = model
+        if not parts["Torso"] then
+            notifyErro("FakeChar sem Torso!")
+            model:Destroy(); reanimateAtivo = false; return
+        end
+
+        -- 2) colisão nas partes do player via Btools
+        notifyInfo("Aplicando colisao via Btools...")
+        for _, v in ipairs(char:GetDescendants()) do
+            if v:IsA("BasePart") then
+                pcall(function() F3X:SetCollision(v, true) end)
+                task.wait(0.05)
+            end
+        end
+
+        -- 3) move cada Part do FakeChar pra posição relativa ao torso do player
+        notifyInfo("Posicionando FakeChar via Btools...")
+        local origemRoot = CFrame.new(0, -160, 0)
+        local destinoRoot = torsoP.CFrame
+        local deslocamento = destinoRoot * origemRoot:Inverse()
+
+        for _, part in ipairs(parts) do
+            local destino = deslocamento * part.CFrame
+            pcall(function() F3X:Move(part, destino) end)
+            task.wait(0.08)
+        end
+
+        -- 4) BLOQUEIA RESPAWN
+        notifyInfo("Bloqueando respawn...")
+
+        -- 4.1) AutoLoads off (impede auto-respawn local)
+        pcall(function() BG.Players.CharacterAutoLoads = false end)
+
+        -- 4.2) guarda conexões pra limpar depois
+        BG._reanimateConn = {}
+
+        -- 4.3) se o player morrer, reassume o FakeChar na hora
+        table.insert(BG._reanimateConn, BG.Players.LocalPlayer.CharacterAdded:Connect(function(novoChar)
+            if not reanimateAtivo then return end
+            -- veio um character novo: joga ele pro limbo e volta pro FakeChar
+            pcall(function() novoChar:Destroy() end)
+            if fakeCharModel and fakeCharModel.Parent then
+                pcall(function() plr.Character = fakeCharModel end)
+            end
+        end))
+
+        -- 4.4) monitora respawn a cada 0.3s
+        table.insert(BG._reanimateConn, task.spawn(function()
+            while reanimateAtivo do
+                task.wait(0.3)
+                if reanimateAtivo then
+                    pcall(function() BG.Players.CharacterAutoLoads = false end)
+                    if fakeCharModel and fakeCharModel.Parent then
+                        if plr.Character ~= fakeCharModel then
+                            pcall(function() plr.Character = fakeCharModel end)
+                        end
+                    end
+                end
+            end
+        end))
+
+        -- 4.5) troca AGORA pro FakeChar
+        task.wait(0.2)
+        pcall(function() plr.Character = fakeCharModel end)
+
+        _G.BlackGUI.FakeChar = model
+        _G.BlackGUI.FakeCharParts = parts
+        notifySucesso("Reanimate ativo! Respawn bloqueado.")
+
+    else
+        if not reanimateAtivo then return end
+        reanimateAtivo = false
+
+        -- 5) RESTAURA RESPAWN
+        pcall(function() BG.Players.CharacterAutoLoads = true end)
+        if BG._reanimateConn then
+            for _, c in ipairs(BG._reanimateConn) do
+                pcall(function()
+                    if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
+                end)
+            end
+            BG._reanimateConn = nil
+        end
+
+        if fakeCharModel then
+            pcall(function() fakeCharModel:Destroy() end)
+            fakeCharModel = nil
+        end
+        _G.BlackGUI.FakeChar = nil
+        _G.BlackGUI.FakeCharParts = nil
+
+        -- dá respawn normal de novo
+        pcall(function() plr:LoadCharacter() end)
+
+        notifyInfo("Reanimate desligado")
+    end
+end
+
 print("[Jogador] Modulo carregado")
