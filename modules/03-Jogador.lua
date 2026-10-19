@@ -840,7 +840,7 @@ function BG.botaoRestaurarAparencia()
     notifySucesso("Restauradas " .. restauradas .. " partes")
 end
 
--- ============== REANIMATE (próprio, char original no void) ==============
+-- ============== REANIMATE ==============
 local reanimateAtivo = false
 local fakeCharModel = nil
 local reanimateConns = {}
@@ -954,6 +954,7 @@ function BG.toggleReanimate(ativar)
 
         ativarHookLoadAnimation()
 
+        -- esconde o char original
         local origState = { Transparency = {}, CanCollide = {} }
         for _, v in ipairs(char:GetDescendants()) do
             if v:IsA("BasePart") then
@@ -969,13 +970,28 @@ function BG.toggleReanimate(ativar)
         _G.BlackGUI._reanimateOrigState = origState
 
         local camera = workspace.CurrentCamera
-        local fakeHum = model:FindFirstChildOfClass("Humanoid")
-        pcall(function() camera.CameraSubject = fakeHum end)
-
-        local VOID_Y = -50000
         local RS = game:GetService("RunService")
         local UIS = game:GetService("UserInputService")
+        local fakeHumP = model:FindFirstChildOfClass("Humanoid")
+        local rootPart = parts["HumanoidRootPart"]
 
+        -- ============== CÂMERA ==============
+        if fakeHumP then
+            pcall(function()
+                camera.CameraSubject = fakeHumP
+                fakeHumP.CameraOffset = Vector3.zero
+            end)
+        end
+
+        table.insert(reanimateConns, RS.RenderStepped:Connect(function()
+            if not reanimateAtivo then return end
+            if fakeHumP and fakeHumP.Parent and camera.CameraSubject ~= fakeHumP then
+                camera.CameraSubject = fakeHumP
+            end
+        end))
+
+        -- ============== HRP DO PLAYER NO VOID ==============
+        local VOID_Y = -50000
         hrpP.Anchored = false
         hrpP.CFrame = CFrame.new(hrpP.Position.X, VOID_Y, hrpP.Position.Z)
 
@@ -987,71 +1003,183 @@ function BG.toggleReanimate(ativar)
             if humP.Health > 0 then humP.Health = 100 end
         end))
 
-        table.insert(reanimateConns, RS.RenderStepped:Connect(function()
+        -- ============== PARTES SEM COLISÃO EM LOOP ==============
+        table.insert(reanimateConns, RS.Heartbeat:Connect(function()
             if not reanimateAtivo then return end
-            if camera.CameraSubject ~= fakeHum and fakeHum.Parent then
-                camera.CameraSubject = fakeHum
+            if not fakeCharModel or not fakeCharModel.Parent then return end
+            for _, p in ipairs(fakeCharModel:GetChildren()) do
+                if p:IsA("BasePart") then
+                    p.CanCollide = false
+                    p.CanTouch = false
+                end
             end
         end))
 
-        local WALK_SPEED, JUMP_POWER = 16, 50
-        local vel = Vector3.zero
+        -- ============== INPUT MOBILE ==============
+        local touchGui = playerGui:FindFirstChild("TouchGui")
+        local touchFrame = touchGui and touchGui:FindFirstChild("TouchControlFrame")
+        local thumbstick = touchFrame and (touchFrame:FindFirstChild("DynamicThumbstickFrame") or touchFrame:FindFirstChild("ThumbstickFrame"))
+        local jumpButton = touchFrame and touchFrame:FindFirstChild("JumpButton")
+
+        local mobileMove = Vector3.zero
+        local mobileJump = false
+        local thumbstickTouch = nil
+        local jumpTouch = nil
+
+        local function getThumbstickArea()
+            if not thumbstick then return nil end
+            local pos = thumbstick.AbsolutePosition
+            local size = thumbstick.AbsoluteSize
+            return pos, pos + size
+        end
+
+        local function getJumpArea()
+            if not jumpButton then return nil end
+            local pos = jumpButton.AbsolutePosition
+            local size = jumpButton.AbsoluteSize
+            return pos, pos + size
+        end
+
+        local function isInside(pos, tl, br)
+            return pos.X >= tl.X and pos.Y >= tl.Y and pos.X <= br.X and pos.Y <= br.Y
+        end
+
+        table.insert(reanimateConns, UIS.InputBegan:Connect(function(input, gpe)
+            if not reanimateAtivo then return end
+            if input.UserInputType ~= Enum.UserInputType.Touch then return end
+            if gpe then return end
+            if UIS:GetFocusedTextBox() then return end
+
+            local tl, br = getThumbstickArea()
+            if tl and isInside(input.Position, tl, br) then
+                if not thumbstickTouch then
+                    thumbstickTouch = { input = input, startPos = input.Position }
+                end
+                return
+            end
+
+            tl, br = getJumpArea()
+            if tl and isInside(input.Position, tl, br) then
+                if not jumpTouch then
+                    jumpTouch = input
+                    mobileJump = true
+                end
+            end
+        end))
+
+        table.insert(reanimateConns, UIS.InputChanged:Connect(function(input, gpe)
+            if not reanimateAtivo then return end
+            if input.UserInputType ~= Enum.UserInputType.Touch then return end
+            if not thumbstickTouch or thumbstickTouch.input ~= input then return end
+
+            local delta = input.Position - thumbstickTouch.startPos
+            local stickRadius = 40
+            if math.min(camera.ViewportSize.X, camera.ViewportSize.Y) < 500 then
+                stickRadius = 25
+            end
+
+            local mag = delta.Magnitude
+            if mag > stickRadius then
+                delta = delta.Unit * stickRadius
+            end
+
+            local nx = delta.X / stickRadius
+            local ny = delta.Y / stickRadius
+
+            if math.abs(nx) < 0.15 then nx = 0 end
+            if math.abs(ny) < 0.15 then ny = 0 end
+
+            mobileMove = Vector3.new(nx, 0, ny)
+        end))
+
+        table.insert(reanimateConns, UIS.InputEnded:Connect(function(input)
+            if not reanimateAtivo then return end
+            if input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+            if thumbstickTouch and thumbstickTouch.input == input then
+                thumbstickTouch = nil
+                mobileMove = Vector3.zero
+            end
+
+            if jumpTouch == input then
+                jumpTouch = nil
+                mobileJump = false
+            end
+        end))
+
+        -- ============== MOVIMENTO ==============
+        local WALK_SPEED = 16
         local onGround = false
         local jumpCd = 0
 
-        table.insert(reanimateConns, RS.Heartbeat:Connect(function(dt)
+        table.insert(reanimateConns, RS.PreSimulation:Connect(function(dt)
             if not reanimateAtivo then return end
-            local root = parts["HumanoidRootPart"]
-            if not root or not root.Parent then return end
-            vel = Vector3.new(vel.X, vel.Y - workspace.Gravity * dt, vel.Z)
+            if not rootPart or not rootPart.Parent or not fakeHumP or not fakeHumP.Parent then return end
+
             local mv = Vector3.zero
-            if UIS:IsKeyDown(Enum.KeyCode.W) then mv += Vector3.new(0,0,-1) end
-            if UIS:IsKeyDown(Enum.KeyCode.S) then mv += Vector3.new(0,0,1) end
-            if UIS:IsKeyDown(Enum.KeyCode.A) then mv += Vector3.new(-1,0,0) end
-            if UIS:IsKeyDown(Enum.KeyCode.D) then mv += Vector3.new(1,0,0) end
+            local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+
+            if isMobile then
+                mv = Vector3.new(mobileMove.X, 0, mobileMove.Z)
+                if mobileJump and onGround and os.clock() > jumpCd then
+                    fakeHumP.Jump = true
+                    onGround = false
+                    jumpCd = os.clock() + 0.2
+                end
+            else
+                if UIS:IsKeyDown(Enum.KeyCode.W) then mv += Vector3.new(0,0,-1) end
+                if UIS:IsKeyDown(Enum.KeyCode.S) then mv += Vector3.new(0,0,1) end
+                if UIS:IsKeyDown(Enum.KeyCode.A) then mv += Vector3.new(-1,0,0) end
+                if UIS:IsKeyDown(Enum.KeyCode.D) then mv += Vector3.new(1,0,0) end
+                if UIS:IsKeyDown(Enum.KeyCode.Space) and onGround and os.clock() > jumpCd then
+                    fakeHumP.Jump = true
+                    onGround = false
+                    jumpCd = os.clock() + 0.2
+                end
+            end
             if mv.Magnitude > 1 then mv = mv.Unit end
+
+            -- transforma input local em direção no mundo baseado na câmera
             local cL = camera.CFrame.LookVector
             local cR = camera.CFrame.RightVector
             local fL = Vector3.new(cL.X, 0, cL.Z)
             if fL.Magnitude > 0.01 then fL = fL.Unit end
             local fR = Vector3.new(cR.X, 0, cR.Z)
             if fR.Magnitude > 0.01 then fR = fR.Unit end
-            local wm = fL * -mv.Z + fR * mv.X
-            if wm.Magnitude > 1 then wm = wm.Unit end
-            vel = Vector3.new(wm.X * WALK_SPEED, vel.Y, wm.Z * WALK_SPEED)
-            if UIS:IsKeyDown(Enum.KeyCode.Space) and onGround and os.clock() > jumpCd then
-                vel = Vector3.new(vel.X, JUMP_POWER, vel.Z)
-                onGround = false
-                jumpCd = os.clock() + 0.2
-            end
+            local worldDir = fL * -mv.Z + fR * mv.X
+            if worldDir.Magnitude > 1 then worldDir = worldDir.Unit end
+
+            fakeHumP.WalkSpeed = WALK_SPEED
+            fakeHumP:Move(worldDir)
+
             local rp = RaycastParams.new()
             rp.FilterDescendantsInstances = { model }
             rp.FilterType = Enum.RaycastFilterType.Exclude
-            local hit = workspace:Raycast(root.Position, Vector3.new(0,-3.5,0), rp)
-            if hit then
-                if vel.Y < 0 then vel = Vector3.new(vel.X, 0, vel.Z) end
-                onGround = true
+            local hit = workspace:Raycast(rootPart.Position, Vector3.new(0, -4, 0), rp)
+            onGround = hit ~= nil
+
+            pcall(function()
+                sethiddenproperty(fakeHumP, "NetworkHumanoidState", Enum.HumanoidStateType.Freefall.Value)
+            end)
+
+            if worldDir.Magnitude > 0.01 then
+                pcall(function()
+                    sethiddenproperty(fakeHumP, "MoveDirectionInternal", worldDir * WALK_SPEED)
+                end)
             else
-                onGround = false
+                pcall(function()
+                    sethiddenproperty(fakeHumP, "MoveDirectionInternal", Vector3.zero)
+                end)
             end
-            local newPos = root.Position + vel * dt
-            root.CFrame = CFrame.new(newPos) * root.CFrame.Rotation
-            root.AssemblyLinearVelocity = vel
-            if wm.Magnitude > 0.1 then
-                local tA = math.atan2(wm.X, wm.Z)
-                local cA = math.atan2(root.CFrame.LookVector.X, root.CFrame.LookVector.Z)
-                local diff = tA - cA
-                while diff > math.pi do diff -= math.pi*2 end
-                while diff < -math.pi do diff += math.pi*2 end
-                local nA = cA + diff * math.min(1, dt*10)
-                root.CFrame = CFrame.new(newPos) * CFrame.Angles(0, nA, 0)
+
+            if rootPart.Position.Y < -10000 then
+                rootPart.CFrame = CFrame.new(hrpP.Position.X, hrpP.Position.Y + 10, hrpP.Position.Z)
             end
-            if root.Anchored then root.Anchored = false end
         end))
 
         _G.BlackGUI.FakeChar = model
         _G.BlackGUI.FakeCharParts = parts
-        notifySucesso("Reanimate ativo! Use WASD e Espaco.")
+        notifySucesso("Reanimate ativo! Use WASD / joystick.")
     else
         if not reanimateAtivo then return end
         reanimateAtivo = false
