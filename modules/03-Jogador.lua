@@ -1073,6 +1073,115 @@ function BG.botaoRestaurarAparencia()
     notifySucesso("Restauradas " .. restauradas .. " partes")
 end
 
+-- ============== REANIMATE (FakeChar via Instance.new) ==============
+local reanimateAtivo = false
+local fakeCharModel = nil
+local reanimateConns = {}
+
+local FAKE_CHAR_BLUEPRINT = {
+  SourceName = "FakeChar";
+  ClassName = "Model";
+  Descendants = {
+    { Name = "Right Arm"; ClassName = "Part"; CFrame = CFrame.new(-1.500017, 11.000000, -0.000013, 1,0,0, 0,1,0, 0,0,1); Size = Vector3.new(1,2,1); Color = Color3.fromRGB(255,0,0); Material = Enum.Material.Plastic; Transparency = 0.5; Reflectance = 0; Anchored = false; CanCollide = true; Shape = Enum.PartType.Block; },
+    { Name = "Head"; ClassName = "Part"; CFrame = CFrame.new(0, 12.5, 0, 1,0,0, 0,1,0, 0,0,1); Size = Vector3.new(2,1,1); Color = Color3.fromRGB(255,0,0); Material = Enum.Material.Plastic; Transparency = 0.5; Reflectance = 0; Anchored = false; CanCollide = true; Shape = Enum.PartType.Block; },
+    { Name = "Face"; ClassName = "Decal"; Texture = "rbxthumb://type=Asset&id=3112638914&w=420&h=420"; Transparency = 0; },
+    { Name = "Mesh"; ClassName = "SpecialMesh"; MeshType = Enum.MeshType.Head; Scale = Vector3.new(1.25,1.25,1.25); Offset = Vector3.new(0,0,0); },
+    { Name = "Left Arm"; ClassName = "Part"; CFrame = CFrame.new(1.5, 11, 0, 1,0,0, 0,1,0, 0,0,1); Size = Vector3.new(1,2,1); Color = Color3.fromRGB(255,0,0); Material = Enum.Material.Plastic; Transparency = 0.5; Reflectance = 0; Anchored = false; CanCollide = true; Shape = Enum.PartType.Block; },
+    { Name = "Torso"; ClassName = "Part"; CFrame = CFrame.new(0, 11, 0, 1,0,0, 0,1,0, 0,0,1); Size = Vector3.new(2,2,1); Color = Color3.fromRGB(255,0,0); Material = Enum.Material.Plastic; Transparency = 0.5; Reflectance = 0; Anchored = false; CanCollide = true; Shape = Enum.PartType.Block; },
+    { Name = "Mesh"; ClassName = "SpecialMesh"; MeshType = Enum.MeshType.Torso; Scale = Vector3.new(1,1,1); Offset = Vector3.new(0,0,0); },
+    { Name = "HumanoidRootPart"; ClassName = "Part"; CFrame = CFrame.new(0, 11, 0, 1,0,0, 0,1,0, 0,0,1); Size = Vector3.new(2,2,1); Color = Color3.fromRGB(163,162,165); Material = Enum.Material.Plastic; Transparency = 1; Reflectance = 0; Anchored = true; CanCollide = true; Shape = Enum.PartType.Block; },
+    { Name = "Right Leg"; ClassName = "Part"; CFrame = CFrame.new(0.5, 9, 0, 1,0,0, 0,1,0, 0,0,1); Size = Vector3.new(1,2,1); Color = Color3.fromRGB(255,0,0); Material = Enum.Material.Plastic; Transparency = 0.5; Reflectance = 0; Anchored = false; CanCollide = true; Shape = Enum.PartType.Block; },
+    { Name = "Left Leg"; ClassName = "Part"; CFrame = CFrame.new(-0.5, 9, 0, 1,0,0, 0,1,0, 0,0,1); Size = Vector3.new(1,2,1); Color = Color3.fromRGB(255,0,0); Material = Enum.Material.Plastic; Transparency = 0.5; Reflectance = 0; Anchored = false; CanCollide = true; Shape = Enum.PartType.Block; },
+    { Name = "Right Shoulder"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Right Arm"; C0 = CFrame.new(1,0.5,0, 0,0,1, 0,1,0, -1,0,0); C1 = CFrame.new(2.5,0.5,0, 0,0,1, 0,1,0, -1,0,0); },
+    { Name = "Left Shoulder"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Left Arm"; C0 = CFrame.new(-1,0.5,0, 0,0,-1, 0,1,0, 1,0,0); C1 = CFrame.new(-2.5,0.5,0, 0,0,-1, 0,1,0, 1,0,0); },
+    { Name = "Neck"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Head"; C0 = CFrame.new(0,1,0, -1,0,0, 0,0,1, 0,1,0); C1 = CFrame.new(0,-0.5,0, -1,0,0, 0,0,1, 0,1,0); },
+    { Name = "Right Hip"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Right Leg"; C0 = CFrame.new(1,-1,0, 0,0,1, 0,1,0, -1,0,0); C1 = CFrame.new(0.5,1,0, 0,0,1, 0,1,0, -1,0,0); },
+    { Name = "Left Hip"; ClassName = "Motor6D"; Part0 = "Torso"; Part1 = "Left Leg"; C0 = CFrame.new(-1,-1,0, 0,0,-1, 0,1,0, 1,0,0); C1 = CFrame.new(-0.5,1,0, 0,0,-1, 0,1,0, 1,0,0); },
+    { Name = "RootJoint"; ClassName = "Motor6D"; Part0 = "HumanoidRootPart"; Part1 = "Torso"; C0 = CFrame.new(0,0,0, -1,0,0, 0,0,1, 0,1,0); C1 = CFrame.new(0,0,0, -1,0,0, 0,0,1, 0,1,0); },
+    { Name = "Humanoid"; ClassName = "Humanoid"; },
+    { Name = "Animator"; ClassName = "Animator"; },
+  };
+}
+
+local function applyPartProps(part, data)
+    if data.Color then part.Color = data.Color end
+    if data.Material then part.Material = data.Material end
+    if data.Transparency then part.Transparency = data.Transparency end
+    if data.Reflectance then part.Reflectance = data.Reflectance end
+    if data.CanCollide ~= nil then part.CanCollide = data.CanCollide end
+    if data.Shape then pcall(function() part.Shape = data.Shape end) end
+end
+
+local function buildFakeChar()
+    local model = Instance.new("Model")
+    model.Name = "FakeChar"
+    model.Parent = workspace
+
+    local parts = {}
+    local deferred = {}
+
+    for _, data in ipairs(FAKE_CHAR_BLUEPRINT.Descendants) do
+        if data.ClassName == "Part" then
+            local p = Instance.new("Part")
+            p.Name = data.Name
+            p.Anchored = true
+            p.CanCollide = data.CanCollide or false
+            p.Size = data.Size or Vector3.new(1,1,1)
+            p.CFrame = CFrame.new(0, -160, 0)
+            applyPartProps(p, data)
+            p.Parent = model
+            parts[data.Name] = p
+        else
+            table.insert(deferred, data)
+        end
+    end
+
+    for _, data in ipairs(deferred) do
+        if data.ClassName == "SpecialMesh" or data.ClassName == "Decal" then
+            local target = parts["Torso"]
+            if data.ClassName == "Decal" and data.Name == "Face" then target = parts["Head"] end
+            if data.ClassName == "SpecialMesh" and data.MeshType == Enum.MeshType.Head then target = parts["Head"] end
+            if target then
+                local obj = Instance.new(data.ClassName)
+                obj.Name = data.Name
+                if data.MeshType then obj.MeshType = data.MeshType end
+                if data.MeshId then obj.MeshId = data.MeshId end
+                if data.TextureId then obj.TextureId = data.TextureId end
+                if data.Scale then obj.Scale = data.Scale end
+                if data.Offset then obj.Offset = data.Offset end
+                if data.Texture and obj:IsA("Decal") then obj.Texture = data.Texture end
+                if data.Transparency then obj.Transparency = data.Transparency end
+                obj.Parent = target
+            end
+        elseif data.ClassName == "Motor6D" then
+            local m = Instance.new("Motor6D")
+            m.Name = data.Name
+            m.Part0 = parts[data.Part0]
+            m.Part1 = parts[data.Part1]
+            if data.C0 then m.C0 = data.C0 end
+            if data.C1 then m.C1 = data.C1 end
+            m.Parent = parts[data.Part0] or model
+        elseif data.ClassName == "Humanoid" then
+            local h = Instance.new("Humanoid")
+            h.Parent = model
+        elseif data.ClassName == "Animator" then
+            local a = Instance.new("Animator")
+            a.Parent = model:FindFirstChildOfClass("Humanoid") or model
+        end
+    end
+
+    return model, parts
+end
+
+local function desconectarTudo()
+    for _, c in ipairs(reanimateConns) do
+        pcall(function()
+            if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
+        end)
+    end
+    reanimateConns = {}
+end
+
 function BG.toggleReanimate(ativar)
     if ativar then
         if reanimateAtivo then return end
@@ -1103,11 +1212,10 @@ function BG.toggleReanimate(ativar)
             end
         end
 
-        -- 3) move cada Part do FakeChar pra posição relativa ao torso do player
+        -- 3) move o FakeChar pra posição do player via Btools
         notifyInfo("Posicionando FakeChar via Btools...")
         local origemRoot = CFrame.new(0, -160, 0)
-        local destinoRoot = torsoP.CFrame
-        local deslocamento = destinoRoot * origemRoot:Inverse()
+        local deslocamento = torsoP.CFrame * origemRoot:Inverse()
 
         for _, part in ipairs(parts) do
             local destino = deslocamento * part.CFrame
@@ -1121,21 +1229,18 @@ function BG.toggleReanimate(ativar)
         -- 4.1) AutoLoads off (impede auto-respawn local)
         pcall(function() BG.Players.CharacterAutoLoads = false end)
 
-        -- 4.2) guarda conexões pra limpar depois
-        BG._reanimateConn = {}
-
-        -- 4.3) se o player morrer, reassume o FakeChar na hora
-        table.insert(BG._reanimateConn, BG.Players.LocalPlayer.CharacterAdded:Connect(function(novoChar)
+        -- 4.2) se o player morrer, destrói o novo char e reassume o FakeChar
+        table.insert(reanimateConns, plr.CharacterAdded:Connect(function(novoChar)
             if not reanimateAtivo then return end
-            -- veio um character novo: joga ele pro limbo e volta pro FakeChar
+            task.wait(0.1)
             pcall(function() novoChar:Destroy() end)
             if fakeCharModel and fakeCharModel.Parent then
                 pcall(function() plr.Character = fakeCharModel end)
             end
         end))
 
-        -- 4.4) monitora respawn a cada 0.3s
-        table.insert(BG._reanimateConn, task.spawn(function()
+        -- 4.3) loop de monitoramento — re-afirma AutoLoads=false e Character=FakeChar
+        table.insert(reanimateConns, task.spawn(function()
             while reanimateAtivo do
                 task.wait(0.3)
                 if reanimateAtivo then
@@ -1149,7 +1254,7 @@ function BG.toggleReanimate(ativar)
             end
         end))
 
-        -- 4.5) troca AGORA pro FakeChar
+        -- 4.4) troca imediatamente pro FakeChar
         task.wait(0.2)
         pcall(function() plr.Character = fakeCharModel end)
 
@@ -1163,14 +1268,7 @@ function BG.toggleReanimate(ativar)
 
         -- 5) RESTAURA RESPAWN
         pcall(function() BG.Players.CharacterAutoLoads = true end)
-        if BG._reanimateConn then
-            for _, c in ipairs(BG._reanimateConn) do
-                pcall(function()
-                    if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
-                end)
-            end
-            BG._reanimateConn = nil
-        end
+        desconectarTudo()
 
         if fakeCharModel then
             pcall(function() fakeCharModel:Destroy() end)
@@ -1179,11 +1277,8 @@ function BG.toggleReanimate(ativar)
         _G.BlackGUI.FakeChar = nil
         _G.BlackGUI.FakeCharParts = nil
 
-        -- dá respawn normal de novo
         pcall(function() plr:LoadCharacter() end)
-
         notifyInfo("Reanimate desligado")
     end
 end
-
 print("[Jogador] Modulo carregado")
