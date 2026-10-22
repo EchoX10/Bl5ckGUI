@@ -685,6 +685,76 @@ carregandoTask = task.spawn(function()
         task.wait(3)
         if loadingGui and loadingGui.Parent then
             loadingGui:Destroy()
+
+                -- =========================================================
+-- AUTO-EXECUTE (queue_on_teleport)
+-- =========================================================
+local AUTOEXEC_FLAG = "Bl5ckGUI/autoexec.flag"
+local AUTOEXEC_SCRIPT = "Bl5ckGUI/loader_autoload.lua"
+
+local function salvarLoaderParaAutoexec()
+    -- salva o loader inteiro pra rodar automaticamente no próximo jogo
+    local loaderAtual = debug.getinfo(1, "S").source
+    if loaderAtual and loaderAtual:sub(1, 1) == "@" then
+        loaderAtual = loaderAtual:sub(2)
+    end
+
+    -- lê o próprio arquivo (o loader foi salvo no disco pelo executor)
+    local ok, src = pcall(readfile, loaderAtual)
+    if ok and src then
+        escreverArquivo(AUTOEXEC_SCRIPT, src)
+        escreverArquivo(AUTOEXEC_FLAG, "1")
+        return true
+    end
+    return false
+end
+
+local function registrarAutoexec()
+    -- detecta qual método de queue o executor tem
+    local queueFn = nil
+    if type(queue_on_teleport) == "function" then
+        queueFn = queue_on_teleport
+    elseif syn and type(syn.queue_on_teleport) == "function" then
+        queueFn = syn.queue_on_teleport
+    elseif fluxus and type(fluxus.queue_on_teleport) == "function" then
+        queueFn = fluxus.queue_on_teleport
+    end
+
+    if not queueFn then
+        return false
+    end
+
+    -- script que vai ser executado no próximo jogo
+    local autoexecSrc = [[
+        -- BL5CK GUI AUTO-EXECUTE
+        pcall(function()
+            if isfile and isfile("Bl5ckGUI/autoexec.flag") then
+                if isfile("Bl5ckGUI/loader_autoload.lua") then
+                    local src = readfile("Bl5ckGUI/loader_autoload.lua")
+                    loadstring(src)()
+                end
+            end
+        end)
+    ]]
+
+    pcall(queueFn, autoexecSrc)
+    return true
+end
+
+-- tenta registrar o autoexec
+task.spawn(function()
+    task.wait(3)  -- espera o loader terminar
+    if not salvarLoaderParaAutoexec() then
+        warn("[AutoExec] Nao consegui salvar o loader no disco")
+        return
+    end
+    if registrarAutoexec() then
+        if BG.notifyInfo then
+            BG.notifyInfo("Auto-execute ativado!")
+        end
+    else
+        if BG.notifyInfo then
+            BG.notifyInfo("Executor sem queue_on_teleport. Auto-execute indisponivel.")
         end
     end
 end)
