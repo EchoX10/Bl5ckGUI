@@ -8,6 +8,7 @@ local notifySucesso = BG.notifySucesso
 local notifyErro = BG.notifyErro
 local notifyInfo = BG.notifyInfo
 local cmdHD = BG.cmdHD
+local TweenService = BG.TweenService
 
 -- ============== JANELA PRINCIPAL ==============
 local screenGui = Instance.new("ScreenGui")
@@ -18,15 +19,19 @@ screenGui.IgnoreGuiInset = true
 screenGui.DisplayOrder = 999999
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 320, 0, 210)
-mainFrame.Position = UDim2.new(0.05, 0, 0.1, 0)
+mainFrame.Size = UDim2.new(0, 0, 0, 0)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
-mainFrame.ClipsDescendants = true
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
+mainFrame.Parent = loadingGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 14)
+
+-- tween de entrada
+TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 320, 0, 210),
+    Position = UDim2.new(0.5, -200, 0.5, -90)
+}):Play()
 
 local mainStroke = Instance.new("UIStroke")
 mainStroke.Color = Color3.fromRGB(30, 30, 30)
@@ -351,18 +356,20 @@ end)
 -- ABA 5: MIDIA
 local tab5 = adicionarAba("Midia", 5)
 
-local musicRow = Instance.new("Frame")
-musicRow.Size = UDim2.new(1, -4, 0, 50)
-musicRow.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-musicRow.BorderSizePixel = 0
-musicRow.Parent = tab5
-Instance.new("UICorner", musicRow).CornerRadius = UDim.new(0, 8)
-local mrL = Instance.new("UIListLayout")
-mrL.FillDirection = Enum.FillDirection.Horizontal
-mrL.Padding = UDim.new(0, 4)
-mrL.Parent = musicRow
-Instance.new("UIPadding", musicRow).PaddingLeft = UDim.new(0, 4)
-Instance.new("UIPadding", musicRow).PaddingRight = UDim.new(0, 4)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 0, 0, 0)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Parent = loadingGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 14)
+
+-- tween de entrada
+TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 400, 0, 180),
+    Position = UDim2.new(0.5, -200, 0.5, -90)
+}):Play()
 
 local musicToggleBtn = Instance.new("TextButton")
 musicToggleBtn.Size = UDim2.new(1, -50, 1, -4)
@@ -395,16 +402,98 @@ presetBtn.MouseButton1Click:Connect(function() BG.trocarPreset() end)
 
 criarBotao("Disco + Fog + Time 0", BG.botaoDiscoFog, tab5)
 
--- Controles
-local minimizado = false
-local tamanhoOriginal = UDim2.new(0, 320, 0, 210)
+-- botão redondo de minimizado (fica escondido até minimizar)
+local botaoRedondo = Instance.new("ImageButton")
+botaoRedondo.Name = "BotaoMinimizado"
+botaoRedondo.Size = UDim2.new(0, 50, 0, 50)
+botaoRedondo.Position = UDim2.new(0, 20, 0, 20)
+botaoRedondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+botaoRedondo.BorderSizePixel = 0
+botaoRedondo.Visible = false
+botaoRedondo.Parent = loadingGui
+Instance.new("UICorner", botaoRedondo).CornerRadius = UDim.new(1, 0)
 
+local redondoStroke = Instance.new("UIStroke")
+redondoStroke.Color = Color3.fromRGB(40, 180, 70)
+redondoStroke.Thickness = 2
+redondoStroke.Parent = botaoRedondo
+
+-- tenta carregar Button_Img da pasta assets
+local buttonImgPath = PASTA_RAIZ .. "/assets/Button_Img.png"
+if not arqExiste(buttonImgPath) then
+    buttonImgPath = PASTA_RAIZ .. "/assets/Button_Img.jpg"
+end
+
+if arqExiste(buttonImgPath) and getcustomasset then
+    local okAsset, assetId = pcall(getcustomasset, buttonImgPath)
+    if okAsset and assetId then
+        botaoRedondo.Image = assetId
+    end
+end
+
+-- drag do botão redondo
+local draggingRedondo, dragStartRedondo, startPosRedondo
+botaoRedondo.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingRedondo = true
+        dragStartRedondo = input.Position
+        startPosRedondo = botaoRedondo.Position
+    end
+end)
+botaoRedondo.InputChanged:Connect(function(input)
+    if draggingRedondo and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartRedondo
+        botaoRedondo.Position = UDim2.new(startPosRedondo.X.Scale, startPosRedondo.X.Offset + delta.X, startPosRedondo.Y.Scale, startPosRedondo.Y.Offset + delta.Y)
+    end
+end)
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingRedondo = false
+    end
+end)
+
+-- clica no botão redondo = volta o painel
+botaoRedondo.MouseButton1Click:Connect(function()
+    if draggingRedondo then return end
+    -- esconde botão redondo com tween
+    TweenService:Create(botaoRedondo, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 0, 0, 0)
+    }):Play()
+    task.wait(0.3)
+    botaoRedondo.Visible = false
+
+    -- mostra painel com tween
+    mainFrame.Visible = true
+    mainFrame.Size = UDim2.new(0, 0, 0, 0)
+    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = tamanhoOriginal,
+        Position = UDim2.new(0.5, -200, 0.5, -90)
+    }):Play()
+end)
+
+-- minimizar (substitui o minBtn antigo)
+local minimizado = false
+local tamanhoOriginal = UDim2.new(0, 400, 0, 180)
 minBtn.MouseButton1Click:Connect(function()
-    minimizado = not minimizado
-    tabsContainer.Visible = not minimizado
-    contentArea.Visible = not minimizado
-    mainFrame.Size = minimizado and UDim2.new(0, 320, 0, 38) or tamanhoOriginal
-    minBtn.Text = minimizado and "+" or "—"
+    if minimizado then return end
+    minimizado = true
+
+    -- esconde painel com tween
+    TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    task.wait(0.3)
+    mainFrame.Visible = false
+
+    -- mostra botão redondo com tween
+    botaoRedondo.Position = UDim2.new(0, 20, 0, 20)
+    botaoRedondo.Size = UDim2.new(0, 0, 0, 0)
+    botaoRedondo.Visible = true
+    TweenService:Create(botaoRedondo, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 50, 0, 50)
+    }):Play()
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
@@ -412,6 +501,11 @@ closeBtn.MouseButton1Click:Connect(function()
     pcall(function() BG.desligarHideGuis() end)
     pcall(function() BG.desligarLimpar() end)
     pcall(function() BG.pararSpam() end)
+    TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    task.wait(0.35)
     screenGui:Destroy()
 end)
 
