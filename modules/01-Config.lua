@@ -158,8 +158,8 @@ BG.notifyErro    = function(m, d) notificar("erro", m, d) end
 BG.notifyInfo    = function(m, d) notificar("info", m, d) end
 
 -- ============== KEY SYSTEM ==============
-local KEY_FILE = "blackgui_key.txt"
-local KEY_EXPIRE_FILE = "blackgui_expire.txt"
+local KEY_FILE = "Bl5ckGUI/key/blackgui_key.txt"
+local KEY_EXPIRE_FILE = "Bl5ckGUI/key/blackgui_expire.txt"
 local TEMPO_EXPIRACAO = 35 * 60
 
 local function gerarKey()
