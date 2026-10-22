@@ -18,6 +18,12 @@ local COMANDOS_RAPIDOS = BG.COMANDOS_RAPIDOS
 local TRAP_POSITION = BG.TRAP_POSITION
 local TRAP_SIZE = BG.TRAP_SIZE
 
+local overridesCframe = {
+    Position = {},
+    Rotation = {},
+    Scale = {},
+}
+
 -- ============== LISTA DE JOGADORES ==============
 function BG.criarListaJogadores(callback)
     local listaGui = Instance.new("ScreenGui")
@@ -808,6 +814,16 @@ function BG.botaoRestaurarAparencia()
     notifySucesso("Restauradas " .. restauradas .. " partes")
 end
 
+function BG.PartCframe(nomeParte, tipo, valor)
+    if not tipo then tipo = "Rotation" end
+    if tipo ~= "Position" and tipo ~= "Rotation" and tipo ~= "Scale" then
+        notifyErro("Tipo invalido: " .. tostring(tipo))
+        return
+    end
+    if not nomeParte then return end
+    overridesCframe[tipo][nomeParte] = valor
+end
+
 function BG.toggleReanimate(ativar)
     if ativar then
         if reanimateAtivo then return end
@@ -1024,22 +1040,44 @@ function BG.toggleReanimate(ativar)
                             local realPart = charAtual:FindFirstChild(name)
                             if realPart and realPart:IsA("BasePart") and fakePart and fakePart.Parent then
                                 task.spawn(function()
-    -- Teleporte direto se a distância for muito grande (evita esticar)
-    if (fakePart.Position - realPart.Position).Magnitude > 50 then
-        fakePart.CFrame = realPart.CFrame
+task.spawn(function()
+    local overridePos = overridesCframe.Position[name]
+    local overrideRot = overridesCframe.Rotation[name]
+    local overrideScl = overridesCframe.Scale[name]
+
+    local cFrameFinal = realPart.CFrame
+
+    -- posição relativa ao player
+    if overridePos then
+        local hrpReal = charAtual:FindFirstChild("HumanoidRootPart")
+        if hrpReal then
+            cFrameFinal = CFrame.new(hrpReal.CFrame.Position + overridePos) * cFrameFinal.Rotation
+        end
     end
-    -- Posição + rotação
-    pcall(function() F3X:Move(fakePart, realPart.CFrame) end)
-    -- Escala (se mudou)
-    if (fakePart.Size - realPart.Size).Magnitude > 0.01 then
-        pcall(function() F3X:Resize(fakePart, realPart.Size) end)
+
+    -- rotation: ordem ZYX (mais natural pra braço)
+    if overrideRot then
+        local rx = math.rad(overrideRot.X or 0)
+        local ry = math.rad(overrideRot.Y or 0)
+        local rz = math.rad(overrideRot.Z or 0)
+        cFrameFinal = cFrameFinal * CFrame.fromEulerAnglesXYZ(rx, ry, rz)
     end
-    -- Cor (se mudou)
+
+    if (fakePart.Position - cFrameFinal.Position).Magnitude > 50 then
+        fakePart.CFrame = cFrameFinal
+    end
+    pcall(function() F3X:Move(fakePart, cFrameFinal) end)
+
+    local sizeFinal = realPart.Size
+    if overrideScl then sizeFinal = overrideScl end
+    if (fakePart.Size - sizeFinal).Magnitude > 0.01 then
+        pcall(function() F3X:Resize(fakePart, sizeFinal) end)
+    end
+
     if fakePart.Color ~= realPart.Color then
         pcall(function() F3X:SetColor(fakePart, realPart.Color) end)
     end
-end)
-                            end
+end)                            end
                         end
                     end
                 end
@@ -1204,33 +1242,11 @@ function BG.toggleArma(ativar)
 
         armaAtiva = true
 
-        -- 1) localiza Motor6D do braço direito do FakeChar
-        local fakeRightArm = fakeCharParts["Right Arm"]
-        local fakeTorso = fakeCharParts["Torso"]
-        if not fakeTorso then
-            notifyErro("FakeChar sem Torso!")
-            armaAtiva = false
-            return
-        end
+-- levanta o braço direito: rotaciona 90° + move pra cima
+BG.PartCframe("Right Arm", "Rotation", Vector3.new(-90, 0, 0))
+BG.PartCframe("Right Arm", "Position", Vector3.new(1.5, 1.5, 0))
 
-        local motorBraco = fakeTorso:FindFirstChild("Right Shoulder")
-        if not motorBraco then
-            motorBraco = fakeRightArm:FindFirstChild("Right Shoulder")
-        end
-
-        if not motorBraco then
-            notifyErro("Motor6D 'Right Shoulder' do FakeChar nao encontrado!")
-            armaAtiva = false
-            return
-        end
-
-        -- salva C0 original
-        armaC0Original = motorBraco.C0
-
-        -- levanta braço 90° (rotaciona o C0)
-        motorBraco.C0 = armaC0Original * CFrame.Angles(0, 0, math.rad(-90))
-
-        task.wait(0.1)
+task.wait(0.15)
 
         -- 2) calcula ponta do braço depois de levantado
         local armaSize = Vector3.new(1.8, 1.2, 0.2)
@@ -1311,20 +1327,9 @@ function BG.toggleArma(ativar)
         if not armaAtiva then return end
         armaAtiva = false
 
-        -- restaura C0 do braço do FakeChar
-        if armaMotorBraco and armaMotorBraco.Parent and armaC0Original then
-            pcall(function() armaMotorBraco.C0 = armaC0Original end)
-        end
-        armaMotorBraco = nil
-        armaC0Original = nil
-
-        if armaTask then pcall(function() task.cancel(armaTask) end); armaTask = nil end
-        if armaInputConn then pcall(function() armaInputConn:Disconnect() end); armaInputConn = nil end
-        if armaPart and armaPart.Parent then
-            pcall(function() F3X:Remove(armaPart) end)
-            armaPart = nil
-        end
-
+BG.RemoveCframe("Right Arm", "Rotation")
+BG.RemoveCframe("Right Arm", "Position")
+                
         notifyInfo("Arma desligada")
     end
 end
