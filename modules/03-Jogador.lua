@@ -1197,8 +1197,6 @@ function BG.toggleArma(ativar)
         if armaAtiva then return end
         local seBTP = getFork3XEndpoint()
         if not seBTP then notifyErro("Building Tools+ nao encontrada!") return end
-        local char = plr.Character
-        if not char then notifyErro("Character nao encontrado!") return end
         if not fakeCharParts or not fakeCharParts["Right Arm"] then
             notifyErro("FakeChar sem braco direito!")
             return
@@ -1206,46 +1204,49 @@ function BG.toggleArma(ativar)
 
         armaAtiva = true
 
-        -- 1) levanta braço do player (rotação no eixo Z do C0)
-        local rightShoulder = char:FindFirstChild("Right Shoulder")
-if not rightShoulder then
-    notifyInfo("Motor 'Right Shoulder' nao encontrado — braco nao levanta")
-end
+        -- 1) localiza Motor6D do braço direito do FakeChar
+        local fakeRightArm = fakeCharParts["Right Arm"]
+        local fakeTorso = fakeCharParts["Torso"]
+        if not fakeTorso then
+            notifyErro("FakeChar sem Torso!")
+            armaAtiva = false
+            return
+        end
 
--- Loop que força o Transform do Motor6D (C0 direto não funciona no R6)
-local RS_arma = game:GetService("RunService")
-armaBracoConn = RS_arma.Heartbeat:Connect(function()
-    if not armaAtiva then return end
-    local charAtual = plr.Character
-    if not charAtual then return end
-    local motor = charAtual:FindFirstChild("Right Shoulder")
-    if motor then
-        motor.Transform = CFrame.Angles(0, 0, math.rad(-90))
-    end
-end)
+        local motorBraco = fakeTorso:FindFirstChild("Right Shoulder")
+        if not motorBraco then
+            motorBraco = fakeRightArm:FindFirstChild("Right Shoulder")
+        end
 
-task.wait(0.3)
+        if not motorBraco then
+            notifyErro("Motor6D 'Right Shoulder' do FakeChar nao encontrado!")
+            armaAtiva = false
+            return
+        end
 
-        -- espera 0.5s pro FakeChar replicar o braço levantado
-        task.wait(0.5)
+        -- salva C0 original
+        armaC0Original = motorBraco.C0
 
-        -- 2) calcula posição na PONTA do braço do FakeChar
+        -- levanta braço 90° (rotaciona o C0)
+        motorBraco.C0 = armaC0Original * CFrame.Angles(0, 0, math.rad(-90))
+
+        task.wait(0.1)
+
+        -- 2) calcula ponta do braço depois de levantado
         local armaSize = Vector3.new(1.8, 1.2, 0.2)
-        local rightArmFake = fakeCharParts["Right Arm"]
-
-        -- ponta da mão = parte de baixo do braço (Y negativo no espaço local do braço)
-        local handCF = rightArmFake.CFrame * CFrame.new(0, -rightArmFake.Size.Y/2, 0)
-        -- direção: pra onde o braço aponta (LookVector do braço depois de levantado)
-        local handDir = rightArmFake.CFrame.LookVector
-        -- a arma fica no ponto da mão, virada na direção do braço
-        local armaCF = CFrame.lookAt(handCF.Position + handDir * (armaSize.X/2), handCF.Position + handDir * (armaSize.X/2 + 1))
+        local handCF = fakeRightArm.CFrame * CFrame.new(0, -fakeRightArm.Size.Y/2, 0)
+        local handDir = fakeRightArm.CFrame.LookVector
+        local armaCF = CFrame.lookAt(
+            handCF.Position + handDir * (armaSize.X/2),
+            handCF.Position + handDir * (armaSize.X/2 + 1)
+        )
 
         -- 3) cria arma via BTP
         armaPart = F3X:CreatePart("Normal", armaCF, workspace)
         if not armaPart then
             notifyErro("Falha ao criar arma!")
             armaAtiva = false
-            if rightShoulder and armaC0Original then rightShoulder.C0 = armaC0Original end
+            motorBraco.C0 = armaC0Original
             armaC0Original = nil
             return
         end
@@ -1268,6 +1269,9 @@ task.wait(0.3)
             local sm = armaPart:FindFirstChildOfClass("SpecialMesh")
             if sm then sm.Scale = Vector3.new(2, 2, 2) end
         end)
+
+        -- guarda referência do motor pra restaurar depois
+        armaMotorBraco = motorBraco
 
         -- 4) loop: arma segue a mão do FakeChar
         armaTask = task.spawn(function()
@@ -1307,13 +1311,11 @@ task.wait(0.3)
         if not armaAtiva then return end
         armaAtiva = false
 
-        local char = plr.Character
-        if char then
-            local rightShoulder = char:FindFirstChild("Right Shoulder")
-            if rightShoulder and armaC0Original then
-                rightShoulder.C0 = armaC0Original
-            end
+        -- restaura C0 do braço do FakeChar
+        if armaMotorBraco and armaMotorBraco.Parent and armaC0Original then
+            pcall(function() armaMotorBraco.C0 = armaC0Original end)
         end
+        armaMotorBraco = nil
         armaC0Original = nil
 
         if armaTask then pcall(function() task.cancel(armaTask) end); armaTask = nil end
@@ -1326,5 +1328,4 @@ task.wait(0.3)
         notifyInfo("Arma desligada")
     end
 end
-
 print("[Jogador] Modulo carregado")
