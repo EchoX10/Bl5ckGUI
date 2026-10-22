@@ -1243,16 +1243,13 @@ function BG.toggleArma(ativar)
         BG.PartCframe("Right Arm", "Position", Vector3.new(0, 0, 0))
 
         task.wait(0.3)
-
+        
         local armaSize = Vector3.new(1.8, 1.2, 0.2)
         local fakeRightArm = fakeCharParts["Right Arm"]
         local handCF = fakeRightArm.CFrame * CFrame.new(0, -fakeRightArm.Size.Y/2, 0)
-        local handDir = fakeRightArm.CFrame.LookVector
-        local armaCF = CFrame.lookAt(
-            handCF.Position + handDir * (armaSize.X/2),
-            handCF.Position + handDir * (armaSize.X/2 + 1)
-        )
-
+        local handDir = fakeRightArm.CFrame.XVector
+        local armaCF = CFrame.lookAt(handCF.Position, handCF.Position + handDir)
+        
         armaPart = F3X:CreatePart("Normal", armaCF, workspace)
         if not armaPart then
             notifyErro("Falha ao criar arma!")
