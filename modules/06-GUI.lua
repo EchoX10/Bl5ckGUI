@@ -18,19 +18,22 @@ screenGui.Parent = CoreGui
 screenGui.IgnoreGuiInset = true
 screenGui.DisplayOrder = 999999
 
+local TAMANHO_PAINEL = UDim2.new(0, 320, 0, 210)
+local POSICAO_PAINEL = UDim2.new(0.5, -160, 0.5, -105)
+
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 0, 0, 0)
 mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
-mainFrame.Parent = loadingGui
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 14)
 
--- tween de entrada
 TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 320, 0, 210),
-    Position = UDim2.new(0.5, -200, 0.5, -90)
+    Size = TAMANHO_PAINEL,
+    Position = POSICAO_PAINEL
 }):Play()
 
 local mainStroke = Instance.new("UIStroke")
@@ -179,8 +182,10 @@ local function adicionarAba(nome, ordem)
     local l = Instance.new("UIListLayout")
     l.Padding = UDim.new(0, 6)
     l.Parent = content
-    Instance.new("UIPadding", content).PaddingTop = UDim.new(0, 6)
-    Instance.new("UIPadding", content).PaddingBottom = UDim.new(0, 6)
+    local padTop = Instance.new("UIPadding", content)
+    padTop.PaddingTop = UDim.new(0, 6)
+    local padBottom = Instance.new("UIPadding", content)
+    padBottom.PaddingBottom = UDim.new(0, 6)
 
     local idx = #abas + 1
     btn.MouseButton1Click:Connect(function() selecionarAba(idx) end)
@@ -317,6 +322,55 @@ criarBotao("Titulo BL5CK", function()
     notifySucesso("Titulo aplicado")
 end, tab4)
 
+-- ABA 5: MIDIA
+local tab5 = adicionarAba("Midia", 5)
+
+local musicRow = Instance.new("Frame")
+musicRow.Size = UDim2.new(1, -4, 0, 50)
+musicRow.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+musicRow.BorderSizePixel = 0
+musicRow.Parent = tab5
+Instance.new("UICorner", musicRow).CornerRadius = UDim.new(0, 8)
+local mrL = Instance.new("UIListLayout")
+mrL.FillDirection = Enum.FillDirection.Horizontal
+mrL.Padding = UDim.new(0, 4)
+mrL.Parent = musicRow
+local mrPadL = Instance.new("UIPadding", musicRow)
+mrPadL.PaddingLeft = UDim.new(0, 4)
+local mrPadR = Instance.new("UIPadding", musicRow)
+mrPadR.PaddingRight = UDim.new(0, 4)
+
+local musicToggleBtn = Instance.new("TextButton")
+musicToggleBtn.Size = UDim2.new(1, -50, 1, -4)
+musicToggleBtn.Position = UDim2.new(0, 0, 0, 2)
+musicToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+musicToggleBtn.Text = "Musica\n[ DESLIGADO ]"
+musicToggleBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+musicToggleBtn.Font = Enum.Font.GothamMedium
+musicToggleBtn.TextSize = 11
+musicToggleBtn.Parent = musicRow
+Instance.new("UICorner", musicToggleBtn).CornerRadius = UDim.new(0, 6)
+
+local musicEstado = false
+musicToggleBtn.MouseButton1Click:Connect(function()
+    musicEstado = not musicEstado
+    if musicEstado then BG.ligarMusica() else BG.desligarMusica() end
+end)
+
+local presetBtn = Instance.new("TextButton")
+presetBtn.Size = UDim2.new(0, 42, 1, -4)
+presetBtn.Position = UDim2.new(0, 0, 0, 2)
+presetBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
+presetBtn.Text = ">>"
+presetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+presetBtn.Font = Enum.Font.GothamBold
+presetBtn.TextSize = 14
+presetBtn.Parent = musicRow
+Instance.new("UICorner", presetBtn).CornerRadius = UDim.new(0, 6)
+presetBtn.MouseButton1Click:Connect(function() BG.trocarPreset() end)
+
+criarBotao("Disco + Fog + Time 0", BG.botaoDiscoFog, tab5)
+
 -- ABA 6: TRANSFORMATION
 local tab6 = adicionarAba("Transformation", 6)
 criarToggle("Reanimate (FakeChar)", function(e) BG.toggleReanimate(e) end, tab6)
@@ -353,56 +407,7 @@ sendBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ABA 5: MIDIA
-local tab5 = adicionarAba("Midia", 5)
-
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 0, 0, 0)
-mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Parent = loadingGui
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 14)
-
--- tween de entrada
-TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 400, 0, 180),
-    Position = UDim2.new(0.5, -200, 0.5, -90)
-}):Play()
-
-local musicToggleBtn = Instance.new("TextButton")
-musicToggleBtn.Size = UDim2.new(1, -50, 1, -4)
-musicToggleBtn.Position = UDim2.new(0, 0, 0, 2)
-musicToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-musicToggleBtn.Text = "Musica\n[ DESLIGADO ]"
-musicToggleBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-musicToggleBtn.Font = Enum.Font.GothamMedium
-musicToggleBtn.TextSize = 11
-musicToggleBtn.Parent = musicRow
-Instance.new("UICorner", musicToggleBtn).CornerRadius = UDim.new(0, 6)
-
-local musicEstado = false
-musicToggleBtn.MouseButton1Click:Connect(function()
-    musicEstado = not musicEstado
-    if musicEstado then BG.ligarMusica() else BG.desligarMusica() end
-end)
-
-local presetBtn = Instance.new("TextButton")
-presetBtn.Size = UDim2.new(0, 42, 1, -4)
-presetBtn.Position = UDim2.new(0, 0, 0, 2)
-presetBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
-presetBtn.Text = ">>"
-presetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-presetBtn.Font = Enum.Font.GothamBold
-presetBtn.TextSize = 14
-presetBtn.Parent = musicRow
-Instance.new("UICorner", presetBtn).CornerRadius = UDim.new(0, 6)
-presetBtn.MouseButton1Click:Connect(function() BG.trocarPreset() end)
-
-criarBotao("Disco + Fog + Time 0", BG.botaoDiscoFog, tab5)
-
--- botão redondo de minimizado (fica escondido até minimizar)
+-- ============ BOTÃO REDONDO (MINIMIZAR) ============
 local botaoRedondo = Instance.new("ImageButton")
 botaoRedondo.Name = "BotaoMinimizado"
 botaoRedondo.Size = UDim2.new(0, 50, 0, 50)
@@ -410,7 +415,7 @@ botaoRedondo.Position = UDim2.new(0, 20, 0, 20)
 botaoRedondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 botaoRedondo.BorderSizePixel = 0
 botaoRedondo.Visible = false
-botaoRedondo.Parent = loadingGui
+botaoRedondo.Parent = screenGui
 Instance.new("UICorner", botaoRedondo).CornerRadius = UDim.new(1, 0)
 
 local redondoStroke = Instance.new("UIStroke")
@@ -418,13 +423,18 @@ redondoStroke.Color = Color3.fromRGB(40, 180, 70)
 redondoStroke.Thickness = 2
 redondoStroke.Parent = botaoRedondo
 
--- tenta carregar Button_Img da pasta assets
-local buttonImgPath = PASTA_RAIZ .. "/assets/Button_Img.png"
-if not arqExiste(buttonImgPath) then
-    buttonImgPath = PASTA_RAIZ .. "/assets/Button_Img.jpg"
+-- carrega imagem
+local function tentarArquivo(p)
+    local ok, res = pcall(isfile, p)
+    return ok and res
 end
 
-if arqExiste(buttonImgPath) and getcustomasset then
+local buttonImgPath = "Bl5ckGUI/assets/Button_Img.png"
+if not tentarArquivo(buttonImgPath) then
+    buttonImgPath = "Bl5ckGUI/assets/Button_Img.jpg"
+end
+
+if tentarArquivo(buttonImgPath) and getcustomasset then
     local okAsset, assetId = pcall(getcustomasset, buttonImgPath)
     if okAsset and assetId then
         botaoRedondo.Image = assetId
@@ -432,7 +442,8 @@ if arqExiste(buttonImgPath) and getcustomasset then
 end
 
 -- drag do botão redondo
-local draggingRedondo, dragStartRedondo, startPosRedondo
+local draggingRedondo = false
+local dragStartRedondo, startPosRedondo
 botaoRedondo.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingRedondo = true
@@ -452,48 +463,49 @@ game:GetService("UserInputService").InputEnded:Connect(function(input)
     end
 end)
 
--- clica no botão redondo = volta o painel
+-- clica no botão redondo = volta painel
 botaoRedondo.MouseButton1Click:Connect(function()
-    if draggingRedondo then return end
-    -- esconde botão redondo com tween
     TweenService:Create(botaoRedondo, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, 0, 0, 0)
     }):Play()
-    task.wait(0.3)
+    task.wait(0.35)
     botaoRedondo.Visible = false
 
-    -- mostra painel com tween
     mainFrame.Visible = true
     mainFrame.Size = UDim2.new(0, 0, 0, 0)
     mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = tamanhoOriginal,
-        Position = UDim2.new(0.5, -200, 0.5, -90)
+        Size = TAMANHO_PAINEL,
+        Position = POSICAO_PAINEL
     }):Play()
 end)
 
--- minimizar (substitui o minBtn antigo)
+-- minimizar
 local minimizado = false
-local tamanhoOriginal = UDim2.new(0, 400, 0, 180)
 minBtn.MouseButton1Click:Connect(function()
     if minimizado then return end
     minimizado = true
 
-    -- esconde painel com tween
     TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = UDim2.new(0, 0, 0, 0),
         Position = UDim2.new(0.5, 0, 0.5, 0)
     }):Play()
-    task.wait(0.3)
+    task.wait(0.35)
     mainFrame.Visible = false
 
-    -- mostra botão redondo com tween
     botaoRedondo.Position = UDim2.new(0, 20, 0, 20)
     botaoRedondo.Size = UDim2.new(0, 0, 0, 0)
     botaoRedondo.Visible = true
     TweenService:Create(botaoRedondo, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, 50, 0, 50)
     }):Play()
+end)
+
+-- reset no botão redondo (também permite "minimizar")
+botaoRedondo.MouseButton1Click:Connect(function()
+    if draggingRedondo then return end
+    task.wait(0.01)
+    minimizado = false
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
@@ -511,13 +523,12 @@ end)
 
 selecionarAba(1)
 
--- Proteção anti-hide
+-- Proteção anti-hide (só GUIs gerais, não força mainFrame.Visible)
 task.spawn(function()
     while screenGui and screenGui.Parent do
         task.wait(0.3)
         pcall(function()
             if screenGui.Enabled == false then screenGui.Enabled = true end
-            if mainFrame.Visible == false then mainFrame.Visible = true end
         end)
     end
 end)
