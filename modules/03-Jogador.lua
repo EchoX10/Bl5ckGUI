@@ -1009,7 +1009,7 @@ function BG.toggleReanimate(ativar)
 
         reanimateTask = task.spawn(function()
             local RS = game:GetService("RunService")
-            local ULTIMO_GUARD = 0.03  -- 30ms (evita flood, ~33fps)
+            local ULTIMO_GUARD = 0.01
             local ultimo = 0
 
             while reanimateAtivo do
