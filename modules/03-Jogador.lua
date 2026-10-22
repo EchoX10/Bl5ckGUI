@@ -24,6 +24,16 @@ local overridesCframe = {
     Scale = {},
 }
 
+local reanimateAtivo = false
+local reanimateTask = nil
+local fakeCharModel = nil
+local fakeCharParts = {}
+local armaAtiva = false
+local armaPart = nil
+local armaTask = nil
+local armaInputConn = nil
+local ultimoDisparo = 0
+
 -- ============== LISTA DE JOGADORES ==============
 function BG.criarListaJogadores(callback)
     local listaGui = Instance.new("ScreenGui")
@@ -814,6 +824,7 @@ function BG.botaoRestaurarAparencia()
     notifySucesso("Restauradas " .. restauradas .. " partes")
 end
 
+-- ============== PART CFRAME / REMOVE CFRAME ==============
 function BG.PartCframe(nomeParte, tipo, valor)
     if not tipo then tipo = "Rotation" end
     if tipo ~= "Position" and tipo ~= "Rotation" and tipo ~= "Scale" then
@@ -824,6 +835,20 @@ function BG.PartCframe(nomeParte, tipo, valor)
     overridesCframe[tipo][nomeParte] = valor
 end
 
+function BG.RemoveCframe(nomeParte, tipo)
+    if not nomeParte then return end
+    if tipo then
+        if overridesCframe[tipo] then
+            overridesCframe[tipo][nomeParte] = nil
+        end
+    else
+        overridesCframe.Position[nomeParte] = nil
+        overridesCframe.Rotation[nomeParte] = nil
+        overridesCframe.Scale[nomeParte] = nil
+    end
+end
+
+-- ============== REANIMATE ==============
 function BG.toggleReanimate(ativar)
     if ativar then
         if reanimateAtivo then return end
@@ -843,7 +868,6 @@ function BG.toggleReanimate(ativar)
         reanimateAtivo = true
         notifyInfo("Construindo FakeChar...")
 
-        -- ============ 1. CRIA PARTES (tudo block, exceto Head) ============
         local PART_MAP = {"HumanoidRootPart", "Torso", "Head", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}
         local PART_SIZES = {
             ["HumanoidRootPart"] = Vector3.new(2,2,1),
@@ -867,13 +891,11 @@ function BG.toggleReanimate(ativar)
                 F3X:Anchor(p)
                 pcall(function() p.Massless = true end)
 
-                -- copia cor do player
                 local playerPart = char:FindFirstChild(name)
                 if playerPart and playerPart:IsA("BasePart") then
                     pcall(function() F3X:SetColor(p, playerPart.Color) end)
                 end
 
-                -- HRP invisível
                 if name == "HumanoidRootPart" then
                     pcall(function() seBTP:InvokeServer("SyncMaterial", {{Part = p, Transparency = 1}}) end)
                 end
@@ -891,7 +913,6 @@ function BG.toggleReanimate(ativar)
             return
         end
 
-        -- ============ 2. MESH SÓ NA CABEÇA ============
         if parts["Head"] then
             pcall(function() seBTP:InvokeServer("CreateMeshes", {{Part = parts["Head"]}}) end)
             task.wait(0.05)
@@ -904,14 +925,12 @@ function BG.toggleReanimate(ativar)
                 }})
             end)
             task.wait(0.05)
-            -- força MeshType.Head
             pcall(function()
                 local sm = parts["Head"]:FindFirstChildOfClass("SpecialMesh")
                 if sm then sm.MeshType = Enum.MeshType.Head end
             end)
         end
 
-        -- ============ 3. FACE COPIADA DO PLAYER ============
         local faceOriginal = nil
         local headPlayer = char:FindFirstChild("Head")
         if headPlayer then
@@ -941,15 +960,14 @@ function BG.toggleReanimate(ativar)
             task.wait(0.1)
         end
 
-        -- ============ 4. ROUPAS COPIADAS ============
-        local TODAS_FACES = {Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right, Enum.NormalId.Top, Enum.NormalId.Bottom}
+        local FACES_ALL = {Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right, Enum.NormalId.Top, Enum.NormalId.Bottom}
         local function aplicarTextura(part, tex)
             if not part or not tex then return end
-            for _, face in ipairs(TODAS_FACES) do
+            for _, face in ipairs(FACES_ALL) do
                 pcall(function() seBTP:InvokeServer("CreateTextures", {{Part = part, Face = face, TextureType = "Decal"}}) end)
             end
             task.wait(0.1)
-            for _, face in ipairs(TODAS_FACES) do
+            for _, face in ipairs(FACES_ALL) do
                 pcall(function() seBTP:InvokeServer("SyncTexture", {{Part = part, Face = face, TextureType = "Decal", Texture = tex}}) end)
             end
             task.wait(0.1)
@@ -970,7 +988,6 @@ function BG.toggleReanimate(ativar)
             if parts["Right Arm"] then aplicarTextura(parts["Right Arm"], shirtId) end
         end
 
-        -- ============ 5. POSICIONA ============
         local baseCF = hrpPlayer.CFrame
         parts["HumanoidRootPart"].CFrame = baseCF
         parts["Torso"].CFrame = baseCF
@@ -980,7 +997,6 @@ function BG.toggleReanimate(ativar)
         parts["Left Leg"].CFrame = baseCF * CFrame.new(-0.5, -2, 0)
         parts["Right Leg"].CFrame = baseCF * CFrame.new(0.5, -2, 0)
 
-        -- ============ 6. AGRUPA ============
         local grupo = nil
         pcall(function() grupo = seBTP:InvokeServer("CreateGroup", "Model", workspace, listaParts) end)
         task.wait(0.3)
@@ -1000,7 +1016,6 @@ function BG.toggleReanimate(ativar)
         _G.BlackGUI.FakeChar = grupo
         _G.BlackGUI.FakeCharParts = parts
 
-        -- ============ 7. ESCONDE PLAYER (SERVER-SIDE) ============
         notifyInfo("Escondendo personagem...")
 
         local CORPO = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "HumanoidRootPart"}
@@ -1020,7 +1035,6 @@ function BG.toggleReanimate(ativar)
             end
         end
 
-        -- ============ 8. LOOP PARALELO (cada parte independente) ============
         notifyInfo("Iniciando loop paralelo...")
 
         reanimateTask = task.spawn(function()
@@ -1035,49 +1049,46 @@ function BG.toggleReanimate(ativar)
                     ultimo = agora
                     local charAtual = plr.Character
                     if charAtual then
-                        -- PARALELO: cada parte move/rota/escala em task.spawn separada
                         for name, fakePart in pairs(fakeCharParts) do
                             local realPart = charAtual:FindFirstChild(name)
                             if realPart and realPart:IsA("BasePart") and fakePart and fakePart.Parent then
                                 task.spawn(function()
-task.spawn(function()
-    local overridePos = overridesCframe.Position[name]
-    local overrideRot = overridesCframe.Rotation[name]
-    local overrideScl = overridesCframe.Scale[name]
+                                    local overridePos = overridesCframe.Position[name]
+                                    local overrideRot = overridesCframe.Rotation[name]
+                                    local overrideScl = overridesCframe.Scale[name]
 
-    local cFrameFinal = realPart.CFrame
+                                    local cFrameFinal = realPart.CFrame
 
-    -- posição relativa ao player
-    if overridePos then
-        local hrpReal = charAtual:FindFirstChild("HumanoidRootPart")
-        if hrpReal then
-            cFrameFinal = CFrame.new(hrpReal.CFrame.Position + overridePos) * cFrameFinal.Rotation
-        end
-    end
+                                    if overridePos then
+                                        local hrpReal = charAtual:FindFirstChild("HumanoidRootPart")
+                                        if hrpReal then
+                                            cFrameFinal = CFrame.new(hrpReal.CFrame.Position + overridePos) * cFrameFinal.Rotation
+                                        end
+                                    end
 
-    -- rotation: ordem ZYX (mais natural pra braço)
-    if overrideRot then
-        local rx = math.rad(overrideRot.X or 0)
-        local ry = math.rad(overrideRot.Y or 0)
-        local rz = math.rad(overrideRot.Z or 0)
-        cFrameFinal = cFrameFinal * CFrame.fromEulerAnglesXYZ(rx, ry, rz)
-    end
+                                    if overrideRot then
+                                        local rx = math.rad(overrideRot.X or 0)
+                                        local ry = math.rad(overrideRot.Y or 0)
+                                        local rz = math.rad(overrideRot.Z or 0)
+                                        cFrameFinal = cFrameFinal * CFrame.fromEulerAnglesXYZ(rx, ry, rz)
+                                    end
 
-    if (fakePart.Position - cFrameFinal.Position).Magnitude > 50 then
-        fakePart.CFrame = cFrameFinal
-    end
-    pcall(function() F3X:Move(fakePart, cFrameFinal) end)
+                                    if (fakePart.Position - cFrameFinal.Position).Magnitude > 50 then
+                                        fakePart.CFrame = cFrameFinal
+                                    end
+                                    pcall(function() F3X:Move(fakePart, cFrameFinal) end)
 
-    local sizeFinal = realPart.Size
-    if overrideScl then sizeFinal = overrideScl end
-    if (fakePart.Size - sizeFinal).Magnitude > 0.01 then
-        pcall(function() F3X:Resize(fakePart, sizeFinal) end)
-    end
+                                    local sizeFinal = realPart.Size
+                                    if overrideScl then sizeFinal = overrideScl end
+                                    if (fakePart.Size - sizeFinal).Magnitude > 0.01 then
+                                        pcall(function() F3X:Resize(fakePart, sizeFinal) end)
+                                    end
 
-    if fakePart.Color ~= realPart.Color then
-        pcall(function() F3X:SetColor(fakePart, realPart.Color) end)
-    end
-end)                            end
+                                    if fakePart.Color ~= realPart.Color then
+                                        pcall(function() F3X:SetColor(fakePart, realPart.Color) end)
+                                    end
+                                end)
+                            end
                         end
                     end
                 end
@@ -1124,16 +1135,9 @@ end)                            end
         _G.BlackGUI.FakeCharParts = nil
         notifyInfo("FakeChar removido")
     end
-end 
+end
 
--- ============== ARMA (anexa no braço do FakeChar, tudo BTP) ==============
-local armaAtiva = false
-local armaPart = nil
-local armaTask = nil
-local armaInputConn = nil
-local armaC0Original = nil
-local ultimoDisparo = 0
-
+-- ============== ARMA ==============
 local function dispararArma()
     if not armaPart or not armaPart.Parent then return end
     if os.clock() - ultimoDisparo < 0.2 then return end
@@ -1143,7 +1147,6 @@ local function dispararArma()
     if not seBTP then return end
 
     local projSize = Vector3.new(0.34, 0.1, 0.12)
-    -- Direção: pra onde o braço do FakeChar aponta (LookVector)
     local dir = armaPart.CFrame.LookVector
     local startPos = armaPart.CFrame.Position + dir * 1
     local cf = CFrame.lookAt(startPos, startPos + dir)
@@ -1161,19 +1164,13 @@ local function dispararArma()
     task.wait(0.05)
     pcall(function()
         seBTP:InvokeServer("SyncMesh", {{
-            Part = proj,
-            MeshId = "",
-            TextureId = "",
-            Scale = Vector3.new(1, 1, 1)
+            Part = proj, MeshId = "", TextureId = "", Scale = Vector3.new(1, 1, 1)
         }})
     end)
     task.wait(0.05)
     pcall(function()
         local sm = proj:FindFirstChildOfClass("SpecialMesh")
-        if sm then
-            sm.MeshType = Enum.MeshType.Cylinder
-            sm.Scale = Vector3.new(1, 1, 1)
-        end
+        if sm then sm.MeshType = Enum.MeshType.Cylinder sm.Scale = Vector3.new(1, 1, 1) end
     end)
 
     local criadoEm = os.clock()
@@ -1242,14 +1239,13 @@ function BG.toggleArma(ativar)
 
         armaAtiva = true
 
--- levanta o braço direito: rotaciona 90° + move pra cima
-BG.PartCframe("Right Arm", "Rotation", Vector3.new(-90, 0, 0))
-BG.PartCframe("Right Arm", "Position", Vector3.new(1.5, 1.5, 0))
+        BG.PartCframe("Right Arm", "Rotation", Vector3.new(-90, 0, 0))
+        BG.PartCframe("Right Arm", "Position", Vector3.new(1.5, 1.5, 0))
 
-task.wait(0.15)
+        task.wait(0.3)
 
-        -- 2) calcula ponta do braço depois de levantado
         local armaSize = Vector3.new(1.8, 1.2, 0.2)
+        local fakeRightArm = fakeCharParts["Right Arm"]
         local handCF = fakeRightArm.CFrame * CFrame.new(0, -fakeRightArm.Size.Y/2, 0)
         local handDir = fakeRightArm.CFrame.LookVector
         local armaCF = CFrame.lookAt(
@@ -1257,13 +1253,12 @@ task.wait(0.15)
             handCF.Position + handDir * (armaSize.X/2 + 1)
         )
 
-        -- 3) cria arma via BTP
         armaPart = F3X:CreatePart("Normal", armaCF, workspace)
         if not armaPart then
             notifyErro("Falha ao criar arma!")
             armaAtiva = false
-            motorBraco.C0 = armaC0Original
-            armaC0Original = nil
+            BG.RemoveCframe("Right Arm", "Rotation")
+            BG.RemoveCframe("Right Arm", "Position")
             return
         end
         armaPart.Name = "BL5CK_Arma"
@@ -1286,10 +1281,6 @@ task.wait(0.15)
             if sm then sm.Scale = Vector3.new(2, 2, 2) end
         end)
 
-        -- guarda referência do motor pra restaurar depois
-        armaMotorBraco = motorBraco
-
-        -- 4) loop: arma segue a mão do FakeChar
         armaTask = task.spawn(function()
             local RS = game:GetService("RunService")
             local ultimo = 0
@@ -1313,7 +1304,6 @@ task.wait(0.15)
             end
         end)
 
-        -- 5) clique dispara
         armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
             if gpe then return end
             if not armaAtiva then return end
@@ -1327,10 +1317,18 @@ task.wait(0.15)
         if not armaAtiva then return end
         armaAtiva = false
 
-BG.RemoveCframe("Right Arm", "Rotation")
-BG.RemoveCframe("Right Arm", "Position")
-                
+        BG.RemoveCframe("Right Arm", "Rotation")
+        BG.RemoveCframe("Right Arm", "Position")
+
+        if armaTask then pcall(function() task.cancel(armaTask) end); armaTask = nil end
+        if armaInputConn then pcall(function() armaInputConn:Disconnect() end); armaInputConn = nil end
+        if armaPart and armaPart.Parent then
+            pcall(function() F3X:Remove(armaPart) end)
+            armaPart = nil
+        end
+
         notifyInfo("Arma desligada")
     end
 end
+
 print("[Jogador] Modulo carregado")
