@@ -680,28 +680,25 @@ carregandoTask = task.spawn(function()
         loadingGui:Destroy()
     end)
 
-    if not ok and not cancelado then
+        if not ok and not cancelado then
         warn("[Loader] Erro: " .. tostring(err))
         task.wait(3)
         if loadingGui and loadingGui.Parent then
             loadingGui:Destroy()
+        end
+    end
+end)
 
-                -- =========================================================
+-- =========================================================
 -- AUTO-EXECUTE (queue_on_teleport)
 -- =========================================================
 local AUTOEXEC_FLAG = "Bl5ckGUI/autoexec.flag"
 local AUTOEXEC_SCRIPT = "Bl5ckGUI/loader_autoload.lua"
 
 local function salvarLoaderParaAutoexec()
-    -- salva o loader inteiro pra rodar automaticamente no próximo jogo
-    local loaderAtual = debug.getinfo(1, "S").source
-    if loaderAtual and loaderAtual:sub(1, 1) == "@" then
-        loaderAtual = loaderAtual:sub(2)
-    end
-
-    -- lê o próprio arquivo (o loader foi salvo no disco pelo executor)
-    local ok, src = pcall(readfile, loaderAtual)
-    if ok and src then
+    -- baixa o loader atualizado do GitHub e salva no disco
+    local ok, src = pcall(game.HttpGet, game, "https://raw.githubusercontent.com/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/" .. GITHUB_BRANCH .. "/Loader.lua", true)
+    if ok and src and #src > 500 then
         escreverArquivo(AUTOEXEC_SCRIPT, src)
         escreverArquivo(AUTOEXEC_FLAG, "1")
         return true
@@ -710,7 +707,6 @@ local function salvarLoaderParaAutoexec()
 end
 
 local function registrarAutoexec()
-    -- detecta qual método de queue o executor tem
     local queueFn = nil
     if type(queue_on_teleport) == "function" then
         queueFn = queue_on_teleport
@@ -724,9 +720,7 @@ local function registrarAutoexec()
         return false
     end
 
-    -- script que vai ser executado no próximo jogo
     local autoexecSrc = [[
-        -- BL5CK GUI AUTO-EXECUTE
         pcall(function()
             if isfile and isfile("Bl5ckGUI/autoexec.flag") then
                 if isfile("Bl5ckGUI/loader_autoload.lua") then
@@ -741,20 +735,15 @@ local function registrarAutoexec()
     return true
 end
 
--- tenta registrar o autoexec
 task.spawn(function()
-    task.wait(3)  -- espera o loader terminar
+    task.wait(3)
     if not salvarLoaderParaAutoexec() then
-        warn("[AutoExec] Nao consegui salvar o loader no disco")
+        warn("[AutoExec] Não consegui baixar o loader para autoexec")
         return
     end
     if registrarAutoexec() then
-        if BG.notifyInfo then
-            BG.notifyInfo("Auto-execute ativado!")
-        end
+        print("[AutoExec] Ativado via queue_on_teleport")
     else
-        if BG.notifyInfo then
-            BG.notifyInfo("Executor sem queue_on_teleport. Auto-execute indisponivel.")
-        end
+        print("[AutoExec] Executor sem queue_on_teleport")
     end
 end)
