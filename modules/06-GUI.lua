@@ -315,6 +315,7 @@ end, tab4)
 -- ABA 6: TRANSFORMATION
 local tab6 = adicionarAba("Transformation", 6)
 criarToggle("Reanimate (FakeChar)", function(e) BG.toggleReanimate(e) end, tab6)
+criarToggle("Arma (Precisa Reanimate)", function(e) BG.toggleArma(e) end, tab6)
 
 local msgBox = Instance.new("TextBox")
 msgBox.Size = UDim2.new(1, -4, 0, 42)
