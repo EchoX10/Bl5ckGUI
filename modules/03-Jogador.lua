@@ -1105,9 +1105,10 @@ local function dispararArma()
     if not seBTP then return end
 
     local projSize = Vector3.new(0.34, 0.1, 0.12)
-    local dir = armaPart.CFrame.XVector
+    -- Direção: pra onde o braço do FakeChar aponta (LookVector)
+    local dir = armaPart.CFrame.LookVector
     local startPos = armaPart.CFrame.Position + dir * 1
-    local cf = CFrame.fromMatrix(startPos, dir, Vector3.new(0, 1, 0))
+    local cf = CFrame.lookAt(startPos, startPos + dir)
 
     local proj = F3X:CreatePart("Normal", cf, workspace)
     if not proj then return end
@@ -1153,7 +1154,7 @@ local function dispararArma()
             local agora = os.clock()
             if agora - ultimoMove >= GUARD_PROJ then
                 ultimoMove = agora
-                cfAtual = cfAtual * CFrame.new(2, 0, 0)
+                cfAtual = cfAtual + cfAtual.LookVector * 2
                 pcall(function() F3X:Move(proj, cfAtual) end)
             end
 
@@ -1205,21 +1206,30 @@ function BG.toggleArma(ativar)
 
         armaAtiva = true
 
+        -- 1) levanta braço do player (rotação no eixo Z do C0)
         local rightShoulder = char:FindFirstChild("Right Shoulder")
         if rightShoulder then
             armaC0Original = rightShoulder.C0
-            rightShoulder.C0 = rightShoulder.C0 * CFrame.Angles(math.rad(-90), 0, 0)
+            rightShoulder.C0 = armaC0Original * CFrame.Angles(0, 0, math.rad(-90))
         else
             notifyInfo("Motor 'Right Shoulder' nao encontrado — braco nao levanta")
         end
 
+        -- espera 0.5s pro FakeChar replicar o braço levantado
+        task.wait(0.5)
+
+        -- 2) calcula posição na PONTA do braço do FakeChar
         local armaSize = Vector3.new(1.8, 1.2, 0.2)
         local rightArmFake = fakeCharParts["Right Arm"]
-        local handCF = rightArmFake.CFrame * CFrame.new(0, -rightArmFake.Size.Y/2, 0)
-        local handDir = (handCF.Position - rightArmFake.CFrame.Position).Unit
-        if handDir.Magnitude < 0.1 then handDir = rightArmFake.CFrame.LookVector end
-        local armaCF = CFrame.fromMatrix(handCF.Position + handDir * (armaSize.X/2), handDir, Vector3.new(0, 1, 0))
 
+        -- ponta da mão = parte de baixo do braço (Y negativo no espaço local do braço)
+        local handCF = rightArmFake.CFrame * CFrame.new(0, -rightArmFake.Size.Y/2, 0)
+        -- direção: pra onde o braço aponta (LookVector do braço depois de levantado)
+        local handDir = rightArmFake.CFrame.LookVector
+        -- a arma fica no ponto da mão, virada na direção do braço
+        local armaCF = CFrame.lookAt(handCF.Position + handDir * (armaSize.X/2), handCF.Position + handDir * (armaSize.X/2 + 1))
+
+        -- 3) cria arma via BTP
         armaPart = F3X:CreatePart("Normal", armaCF, workspace)
         if not armaPart then
             notifyErro("Falha ao criar arma!")
@@ -1236,14 +1246,19 @@ function BG.toggleArma(ativar)
         pcall(function() seBTP:InvokeServer("CreateMeshes", {{Part = armaPart}}) end)
         task.wait(0.1)
         pcall(function()
-        seBTP:InvokeServer("SyncMesh", {{
-        Part = armaPart,
-        MeshId = "rbxassetid://17123035118",
-        TextureId = "rbxassetid://17123035309",
-        Scale = Vector3.new(2, 2, 2)
-    }})
-end)
+            seBTP:InvokeServer("SyncMesh", {{
+                Part = armaPart,
+                MeshId = "rbxassetid://17123035118",
+                TextureId = "rbxassetid://17123035309",
+                Scale = Vector3.new(2, 2, 2)
+            }})
+        end)
+        pcall(function()
+            local sm = armaPart:FindFirstChildOfClass("SpecialMesh")
+            if sm then sm.Scale = Vector3.new(2, 2, 2) end
+        end)
 
+        -- 4) loop: arma segue a mão do FakeChar
         armaTask = task.spawn(function()
             local RS = game:GetService("RunService")
             local ultimo = 0
@@ -1256,12 +1271,10 @@ end)
                     local rightArm = fakeCharParts and fakeCharParts["Right Arm"]
                     if rightArm and rightArm.Parent and armaPart and armaPart.Parent then
                         local handCF = rightArm.CFrame * CFrame.new(0, -rightArm.Size.Y/2, 0)
-                        local handDir = (handCF.Position - rightArm.CFrame.Position).Unit
-                        if handDir.Magnitude < 0.1 then handDir = rightArm.CFrame.LookVector end
-                        local armaCF = CFrame.fromMatrix(
+                        local handDir = rightArm.CFrame.LookVector
+                        local armaCF = CFrame.lookAt(
                             handCF.Position + handDir * (armaSize.X/2),
-                            handDir,
-                            Vector3.new(0, 1, 0)
+                            handCF.Position + handDir * (armaSize.X/2 + 1)
                         )
                         pcall(function() F3X:Move(armaPart, armaCF) end)
                     end
@@ -1269,6 +1282,7 @@ end)
             end
         end)
 
+        -- 5) clique dispara
         armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
             if gpe then return end
             if not armaAtiva then return end
