@@ -587,6 +587,67 @@ carregandoTask = task.spawn(function()
         setProgresso(0.56)
         abortarSeCancelado()
 
+        -- ETAPA 3.5: baixar assets
+setStatus("Verificando assets...", "")
+setProgresso(0.57)
+task.wait(0.1)
+abortarSeCancelado()
+
+local PASTA_ASSETS = PASTA_RAIZ .. "/assets"
+if not pastaExiste(PASTA_ASSETS) then
+    garantirPasta(PASTA_ASSETS)
+    task.wait(0.05)
+end
+
+-- baixa lista de arquivos da API do GitHub
+local okApi, apiResp = pcall(game.HttpGet, game, "https://api.github.com/repos/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/contents/bl5ckguiassets", true)
+
+if okApi and apiResp and #apiResp > 10 then
+    local okDecode, lista = pcall(function() return HttpService:JSONDecode(apiResp) end)
+
+    if okDecode and type(lista) == "table" then
+        local totalAssets = 0
+        for _, arq in ipairs(lista) do
+            if arq.type == "file" and arq.name and arq.download_url then
+                local ext = arq.name:match("%.(%w+)$")
+                if ext and (ext:lower() == "png" or ext:lower() == "jpg" or ext:lower() == "jpeg" or ext:lower() == "webp" or ext:lower() == "gif") then
+                    totalAssets = totalAssets + 1
+                end
+            end
+        end
+
+        if totalAssets > 0 then
+            setStatus("Baixando " .. totalAssets .. " assets...", "")
+            local baixados = 0
+            for i, arq in ipairs(lista) do
+                abortarSeCancelado()
+                if arq.type == "file" and arq.name and arq.download_url then
+                    local ext = arq.name:match("%.(%w+)$")
+                    if ext and (ext:lower() == "png" or ext:lower() == "jpg" or ext:lower() == "jpeg" or ext:lower() == "webp" or ext:lower() == "gif") then
+                        baixados = baixados + 1
+                        setStatus("Baixando asset " .. baixados .. "/" .. totalAssets, arq.name)
+                        setProgresso(0.57 + (baixados / totalAssets) * 0.03)
+
+                        local caminhoLocal = PASTA_ASSETS .. "/" .. arq.name
+                        if not arqExiste(caminhoLocal) then
+                            local okDl, conteudo = pcall(game.HttpGet, game, arq.download_url, true)
+                            if okDl and conteudo and #conteudo > 10 then
+                                escreverArquivo(caminhoLocal, conteudo)
+                            end
+                        end
+                        task.wait(0.03)
+                    end
+                end
+            end
+        end
+    end
+else
+    setStatus("Aviso: nao consegui verificar assets", "Seguindo sem assets")
+    task.wait(0.5)
+end
+setProgresso(0.6)
+abortarSeCancelado()
+                
         -- ETAPA 4: carregar módulos base
         setStatus("Carregando módulos base...", "")
         for i, arquivo in ipairs(MODULOS) do
