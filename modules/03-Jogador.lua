@@ -1087,4 +1087,219 @@ end)
         notifyInfo("FakeChar removido")
     end
 end 
+
+-- ============== ARMA (anexa no braço do FakeChar, tudo BTP) ==============
+local armaAtiva = false
+local armaPart = nil
+local armaTask = nil
+local armaInputConn = nil
+local armaC0Original = nil
+local ultimoDisparo = 0
+
+local function dispararArma()
+    if not armaPart or not armaPart.Parent then return end
+    if os.clock() - ultimoDisparo < 0.2 then return end
+    ultimoDisparo = os.clock()
+
+    local seBTP = getFork3XEndpoint()
+    if not seBTP then return end
+
+    local projSize = Vector3.new(0.34, 0.1, 0.12)
+    local dir = armaPart.CFrame.XVector
+    local startPos = armaPart.CFrame.Position + dir * 1
+    local cf = CFrame.fromMatrix(startPos, dir, Vector3.new(0, 1, 0))
+
+    local proj = F3X:CreatePart("Normal", cf, workspace)
+    if not proj then return end
+    proj.Name = "BL5CK_Projetil"
+    F3X:Resize(proj, projSize)
+    F3X:SetColor(proj, Color3.fromRGB(255, 255, 0))
+    F3X:SetCollision(proj, false)
+    F3X:Anchor(proj)
+    pcall(function() proj.Material = Enum.Material.Neon end)
+
+    pcall(function() seBTP:InvokeServer("CreateMeshes", {{Part = proj}}) end)
+    task.wait(0.05)
+    pcall(function()
+        seBTP:InvokeServer("SyncMesh", {{
+            Part = proj,
+            MeshId = "",
+            TextureId = "",
+            Scale = Vector3.new(1, 1, 1)
+        }})
+    end)
+    task.wait(0.05)
+    pcall(function()
+        local sm = proj:FindFirstChildOfClass("SpecialMesh")
+        if sm then
+            sm.MeshType = Enum.MeshType.Cylinder
+            sm.Scale = Vector3.new(1, 1, 1)
+        end
+    end)
+
+    local criadoEm = os.clock()
+    local ativo = true
+    local RS = game:GetService("RunService")
+    local cfAtual = cf
+    local ultimoMove = 0
+    local GUARD_PROJ = 0.01
+
+    task.spawn(function()
+        while ativo do
+            RS.Heartbeat:Wait()
+            if not ativo then break end
+            if not proj or not proj.Parent then break end
+
+            local agora = os.clock()
+            if agora - ultimoMove >= GUARD_PROJ then
+                ultimoMove = agora
+                cfAtual = cfAtual * CFrame.new(2, 0, 0)
+                pcall(function() F3X:Move(proj, cfAtual) end)
+            end
+
+            if os.clock() - criadoEm > 4 then
+                ativo = false
+                pcall(function() F3X:Remove(proj) end)
+                break
+            end
+
+            local params = OverlapParams.new()
+            local filtros = { proj }
+            if plr.Character then table.insert(filtros, plr.Character) end
+            if fakeCharModel then table.insert(filtros, fakeCharModel) end
+            params.FilterDescendantsInstances = filtros
+            params.FilterType = Enum.RaycastFilterType.Exclude
+
+            local hits = workspace:GetPartBoundsInBox(cfAtual, projSize * 2, params)
+            for _, hit in ipairs(hits) do
+                local hitModel = hit:FindFirstAncestorOfClass("Model")
+                if hitModel then
+                    local hitPlayer = Players:GetPlayerFromCharacter(hitModel)
+                    if hitPlayer and hitPlayer ~= plr then
+                        cmdHD(";kill " .. hitPlayer.Name)
+                        ativo = false
+                        pcall(function() F3X:Remove(proj) end)
+                        break
+                    end
+                end
+            end
+        end
+    end)
+end
+
+function BG.toggleArma(ativar)
+    if ativar then
+        if not reanimateAtivo then
+            notifyInfo("Ativa o Reanimate primeiro!")
+            return
+        end
+        if armaAtiva then return end
+        local seBTP = getFork3XEndpoint()
+        if not seBTP then notifyErro("Building Tools+ nao encontrada!") return end
+        local char = plr.Character
+        if not char then notifyErro("Character nao encontrado!") return end
+        if not fakeCharParts or not fakeCharParts["Right Arm"] then
+            notifyErro("FakeChar sem braco direito!")
+            return
+        end
+
+        armaAtiva = true
+
+        local rightShoulder = char:FindFirstChild("Right Shoulder")
+        if rightShoulder then
+            armaC0Original = rightShoulder.C0
+            rightShoulder.C0 = rightShoulder.C0 * CFrame.Angles(math.rad(-90), 0, 0)
+        else
+            notifyInfo("Motor 'Right Shoulder' nao encontrado — braco nao levanta")
+        end
+
+        local armaSize = Vector3.new(1.8, 1.2, 0.2)
+        local rightArmFake = fakeCharParts["Right Arm"]
+        local handCF = rightArmFake.CFrame * CFrame.new(0, -rightArmFake.Size.Y/2, 0)
+        local handDir = (handCF.Position - rightArmFake.CFrame.Position).Unit
+        if handDir.Magnitude < 0.1 then handDir = rightArmFake.CFrame.LookVector end
+        local armaCF = CFrame.fromMatrix(handCF.Position + handDir * (armaSize.X/2), handDir, Vector3.new(0, 1, 0))
+
+        armaPart = F3X:CreatePart("Normal", armaCF, workspace)
+        if not armaPart then
+            notifyErro("Falha ao criar arma!")
+            armaAtiva = false
+            if rightShoulder and armaC0Original then rightShoulder.C0 = armaC0Original end
+            armaC0Original = nil
+            return
+        end
+        armaPart.Name = "BL5CK_Arma"
+        F3X:Resize(armaPart, armaSize)
+        F3X:SetCollision(armaPart, false)
+        F3X:Anchor(armaPart)
+
+        pcall(function() seBTP:InvokeServer("CreateMeshes", {{Part = armaPart}}) end)
+        task.wait(0.1)
+        pcall(function()
+        seBTP:InvokeServer("SyncMesh", {{
+        Part = armaPart,
+        MeshId = "rbxassetid://17123035118",
+        TextureId = "rbxassetid://17123035309",
+        Scale = Vector3.new(2, 2, 2)
+    }})
+end)
+
+        armaTask = task.spawn(function()
+            local RS = game:GetService("RunService")
+            local ultimo = 0
+            local GUARD = 0.01
+            while armaAtiva and reanimateAtivo do
+                RS.Heartbeat:Wait()
+                local agora = os.clock()
+                if agora - ultimo >= GUARD then
+                    ultimo = agora
+                    local rightArm = fakeCharParts and fakeCharParts["Right Arm"]
+                    if rightArm and rightArm.Parent and armaPart and armaPart.Parent then
+                        local handCF = rightArm.CFrame * CFrame.new(0, -rightArm.Size.Y/2, 0)
+                        local handDir = (handCF.Position - rightArm.CFrame.Position).Unit
+                        if handDir.Magnitude < 0.1 then handDir = rightArm.CFrame.LookVector end
+                        local armaCF = CFrame.fromMatrix(
+                            handCF.Position + handDir * (armaSize.X/2),
+                            handDir,
+                            Vector3.new(0, 1, 0)
+                        )
+                        pcall(function() F3X:Move(armaPart, armaCF) end)
+                    end
+                end
+            end
+        end)
+
+        armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
+            if gpe then return end
+            if not armaAtiva then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dispararArma()
+            end
+        end)
+
+        notifySucesso("Arma ativa! Clique pra atirar.")
+    else
+        if not armaAtiva then return end
+        armaAtiva = false
+
+        local char = plr.Character
+        if char then
+            local rightShoulder = char:FindFirstChild("Right Shoulder")
+            if rightShoulder and armaC0Original then
+                rightShoulder.C0 = armaC0Original
+            end
+        end
+        armaC0Original = nil
+
+        if armaTask then pcall(function() task.cancel(armaTask) end); armaTask = nil end
+        if armaInputConn then pcall(function() armaInputConn:Disconnect() end); armaInputConn = nil end
+        if armaPart and armaPart.Parent then
+            pcall(function() F3X:Remove(armaPart) end)
+            armaPart = nil
+        end
+
+        notifyInfo("Arma desligada")
+    end
+end
+
 print("[Jogador] Modulo carregado")
