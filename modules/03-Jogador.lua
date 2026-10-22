@@ -1208,12 +1208,23 @@ function BG.toggleArma(ativar)
 
         -- 1) levanta braço do player (rotação no eixo Z do C0)
         local rightShoulder = char:FindFirstChild("Right Shoulder")
-        if rightShoulder then
-            armaC0Original = rightShoulder.C0
-            rightShoulder.C0 = armaC0Original * CFrame.Angles(0, 0, math.rad(-90))
-        else
-            notifyInfo("Motor 'Right Shoulder' nao encontrado — braco nao levanta")
-        end
+if not rightShoulder then
+    notifyInfo("Motor 'Right Shoulder' nao encontrado — braco nao levanta")
+end
+
+-- Loop que força o Transform do Motor6D (C0 direto não funciona no R6)
+local RS_arma = game:GetService("RunService")
+armaBracoConn = RS_arma.Heartbeat:Connect(function()
+    if not armaAtiva then return end
+    local charAtual = plr.Character
+    if not charAtual then return end
+    local motor = charAtual:FindFirstChild("Right Shoulder")
+    if motor then
+        motor.Transform = CFrame.Angles(0, 0, math.rad(-90))
+    end
+end)
+
+task.wait(0.3)
 
         -- espera 0.5s pro FakeChar replicar o braço levantado
         task.wait(0.5)
