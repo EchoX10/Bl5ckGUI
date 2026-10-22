@@ -1024,17 +1024,21 @@ function BG.toggleReanimate(ativar)
                             local realPart = charAtual:FindFirstChild(name)
                             if realPart and realPart:IsA("BasePart") and fakePart and fakePart.Parent then
                                 task.spawn(function()
-                                    -- Posição + rotação
-                                    pcall(function() F3X:Move(fakePart, realPart.CFrame) end)
-                                    -- Escala (se mudou)
-                                    if (fakePart.Size - realPart.Size).Magnitude > 0.01 then
-                                        pcall(function() F3X:Resize(fakePart, realPart.Size) end)
-                                    end
-                                    -- Cor (se mudou)
-                                    if fakePart.Color ~= realPart.Color then
-                                        pcall(function() F3X:SetColor(fakePart, realPart.Color) end)
-                                    end
-                                end)
+    -- Teleporte direto se a distância for muito grande (evita esticar)
+    if (fakePart.Position - realPart.Position).Magnitude > 50 then
+        fakePart.CFrame = realPart.CFrame
+    end
+    -- Posição + rotação
+    pcall(function() F3X:Move(fakePart, realPart.CFrame) end)
+    -- Escala (se mudou)
+    if (fakePart.Size - realPart.Size).Magnitude > 0.01 then
+        pcall(function() F3X:Resize(fakePart, realPart.Size) end)
+    end
+    -- Cor (se mudou)
+    if fakePart.Color ~= realPart.Color then
+        pcall(function() F3X:SetColor(fakePart, realPart.Color) end)
+    end
+end)
                             end
                         end
                     end
