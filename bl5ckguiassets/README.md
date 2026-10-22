@@ -9,11 +9,6 @@ Pasta de imagens e recursos visuais do **BL5CK GUI**. Todos os arquivos `.png`, 
 | Arquivo | Descrição | Usado em |
 |---------|-----------|----------|
 | `Button_Img.png` | Ícone do botão redondo (minimizar) | Loader + Painel |
-| `Logo.png` | Logo do projeto | Painel principal |
-| `Banner.png` | Banner de topo | README principal |
-| `Preview.png` | Screenshot do painel | README principal |
-| `Icon_*.png` | Ícones das abas | Painel (abas Jogador, Visual, etc.) |
-| `Bg_*.png` | Fundos e texturas | Painel (temas) |
 
 ---
 
