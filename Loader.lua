@@ -674,13 +674,12 @@ carregandoTask = task.spawn(function()
             Size = UDim2.new(0, 0, 0, 0),
             Position = UDim2.new(0.5, 0, 0.5, 0),
             Rotation = 360,
-        })
-        gira:Play()
+        })        gira:Play()
         gira.Completed:Wait()
         loadingGui:Destroy()
     end)
 
-        if not ok and not cancelado then
+    if not ok and not cancelado then
         warn("[Loader] Erro: " .. tostring(err))
         task.wait(3)
         if loadingGui and loadingGui.Parent then
