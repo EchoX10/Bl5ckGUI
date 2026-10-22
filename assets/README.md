@@ -9,8 +9,6 @@ Pasta de recursos visuais do **BL5CK GUI**. Todas as imagens usadas no README pr
 | Arquivo | Descrição | Usado em |
 |---------|-----------|----------|
 | `preview.png` | Screenshot principal da GUI | README principal (seção Preview) |
-| `logo.png` | Logo/ícone do projeto | README + favicon |
-| `banner.png` | Banner de topo (opcional) | README |
 
 ---
 
