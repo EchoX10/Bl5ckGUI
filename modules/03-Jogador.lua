@@ -822,10 +822,13 @@ function BG.toggleReanimate(ativar)
             notifyInfo("Muda teu avatar pra R6 nas configuracoes")
             return
         end
+        local hrpPlayer = char:FindFirstChild("HumanoidRootPart")
+        if not hrpPlayer then notifyErro("HRP do player nao encontrado!") return end
 
         reanimateAtivo = true
         notifyInfo("Construindo FakeChar via Btools...")
 
+        -- ============ 1. CRIA AS PARTES ============
         local PART_MAP = {"HumanoidRootPart", "Torso", "Head", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}
         local PART_SIZES = {
             ["HumanoidRootPart"] = Vector3.new(2,2,1),
@@ -837,13 +840,9 @@ function BG.toggleReanimate(ativar)
             ["Right Leg"] = Vector3.new(1,2,1),
         }
 
-        -- 1) cria modelo
-        local model = Instance.new("Model")
-        model.Name = "BL5CK_FakeChar"
-        model.Parent = workspace
-        fakeCharModel = model
-
         local parts = {}
+        local listaParts = {}
+
         for _, name in ipairs(PART_MAP) do
             local p = F3X:CreatePart("Normal", CFrame.new(0, -250, 0), workspace)
             if p then
@@ -851,27 +850,35 @@ function BG.toggleReanimate(ativar)
                 F3X:Resize(p, PART_SIZES[name])
                 F3X:SetCollision(p, false)
                 F3X:Anchor(p)
+                -- torna invisível via BTP (mas mantém CanQuery pra weld)
+                pcall(function()
+                    seBTP:InvokeServer("SyncMaterial", {{Part = p, Transparency = 1}})
+                end)
                 parts[name] = p
+                table.insert(listaParts, p)
             end
             task.wait(0.05)
         end
 
         if not parts["Torso"] then
             notifyErro("Falha ao criar partes!")
-            model:Destroy()
+            for _, p in ipairs(listaParts) do pcall(function() F3X:Remove(p) end) end
             reanimateAtivo = false
             return
         end
 
-        -- 2) meshes (igual R6: Head, Torso, e pernas com MeshType.Torso)
+        -- HRP falso invisível
+        pcall(function()
+            seBTP:InvokeServer("SyncMaterial", {{Part = parts["HumanoidRootPart"], Transparency = 1}})
+        end)
+
+        -- ============ 2. APLICA MESHES (R6 padrão) ============
         local function aplicarMesh(part, scale)
             pcall(function() seBTP:InvokeServer("CreateMeshes", {{Part = part}}) end)
             task.wait(0.05)
             pcall(function()
                 seBTP:InvokeServer("SyncMesh", {{
-                    Part = part,
-                    MeshId = "",
-                    TextureId = "",
+                    Part = part, MeshId = "", TextureId = "",
                     Scale = scale or Vector3.new(1,1,1)
                 }})
             end)
@@ -883,27 +890,23 @@ function BG.toggleReanimate(ativar)
         if parts["Left Leg"] then aplicarMesh(parts["Left Leg"], Vector3.new(1,1,1)) end
         if parts["Right Leg"] then aplicarMesh(parts["Right Leg"], Vector3.new(1,1,1)) end
 
-        -- 3) decal Face no Head
+        -- ============ 3. DECAL FACE NO HEAD ============
         if parts["Head"] then
             pcall(function()
                 seBTP:InvokeServer("CreateTextures", {{
-                    Part = parts["Head"],
-                    Face = Enum.NormalId.Front,
-                    TextureType = "Decal"
+                    Part = parts["Head"], Face = Enum.NormalId.Front, TextureType = "Decal"
                 }})
             end)
             task.wait(0.1)
             pcall(function()
                 seBTP:InvokeServer("SyncTexture", {{
-                    Part = parts["Head"],
-                    Face = Enum.NormalId.Front,
-                    TextureType = "Decal",
+                    Part = parts["Head"], Face = Enum.NormalId.Front, TextureType = "Decal",
                     Texture = "rbxassetid://3112638914"
                 }})
             end)
         end
 
-        -- 4) copia roupas (shirt/pants) em todas as faces
+        -- ============ 4. ROUPAS (shirt/pants) ============
         local TODAS_FACES = {Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right, Enum.NormalId.Top, Enum.NormalId.Bottom}
 
         local function aplicarTextura(part, tex)
@@ -937,85 +940,108 @@ function BG.toggleReanimate(ativar)
             if parts["Right Arm"] then aplicarTextura(parts["Right Arm"], shirtId) end
         end
 
-        -- 5) copia cores iniciais do player
-        for name, fakePart in pairs(parts) do
-            local playerPart = char:FindFirstChild(name)
-            if playerPart and playerPart:IsA("BasePart") then
-                pcall(function() F3X:SetColor(fakePart, playerPart.Color) end)
+        -- ============ 5. AGRUPA COM BTP (Model "FakeChar") ============
+        local grupo = nil
+        pcall(function()
+            grupo = seBTP:InvokeServer("CreateGroup", "Model", workspace, listaParts)
+        end)
+        task.wait(0.3)
+
+        -- se o CreateGroup não retornou, cria Model manual
+        if not grupo then
+            grupo = Instance.new("Model")
+            grupo.Name = "FakeChar"
+            grupo.Parent = workspace
+            for _, p in ipairs(listaParts) do
+                if p and p.Parent then p.Parent = grupo end
+            end
+        else
+            -- renomeia via BTP
+            pcall(function() F3X:SetName(grupo, "FakeChar") end)
+        end
+
+        fakeCharModel = grupo
+        fakeCharParts = parts
+        _G.BlackGUI.FakeChar = grupo
+        _G.BlackGUI.FakeCharParts = parts
+
+        -- ============ 6. POSICIONA NO LUGAR DO PLAYER ============
+        local baseCF = hrpPlayer.CFrame * CFrame.new(0, 0, 0)
+        parts["HumanoidRootPart"].CFrame = baseCF
+        parts["Torso"].CFrame = baseCF
+        parts["Head"].CFrame = baseCF * CFrame.new(0, 1.5, 0)
+        parts["Left Arm"].CFrame = baseCF * CFrame.new(-1.5, 0, 0)
+        parts["Right Arm"].CFrame = baseCF * CFrame.new(1.5, 0, 0)
+        parts["Left Leg"].CFrame = baseCF * CFrame.new(-0.5, -2, 0)
+        parts["Right Leg"].CFrame = baseCF * CFrame.new(0.5, -2, 0)
+
+        -- ============ 7. DEIXA O PLAYER INVISÍVEL VIA BTP ============
+        notifyInfo("Escondendo personagem real...")
+        local CORPO = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}
+        for _, name in ipairs(CORPO) do
+            local p = char:FindFirstChild(name)
+            if p and p:IsA("BasePart") then
+                pcall(function()
+                    seBTP:InvokeServer("SyncMaterial", {{Part = p, Transparency = 1}})
+                end)
+            end
+            task.wait(0.05)
+        end
+
+        -- ============ 8. SOLDAS ============
+        notifyInfo("Soldando FakeChar no player...")
+
+        -- 8.1: Solda o HRP falso no HRP do player (raiz de tudo)
+        pcall(function()
+            seBTP:InvokeServer("CreateConstraints", {parts["HumanoidRootPart"]}, {}, hrpPlayer, "Weld")
+        end)
+        task.wait(0.3)
+
+        -- 8.2: Solda as outras partes no HRP falso
+        for name, part in pairs(parts) do
+            if name ~= "HumanoidRootPart" then
+                pcall(function()
+                    seBTP:InvokeServer("CreateConstraints", {part}, {}, parts["HumanoidRootPart"], "Weld")
+                end)
+                task.wait(0.1)
             end
         end
 
-        fakeCharParts = parts
-        _G.BlackGUI.FakeChar = model
-        _G.BlackGUI.FakeCharParts = parts
+        task.wait(0.3)
 
-        -- 6) LOOP de espelhamento
-        reanimateTask = task.spawn(function()
-            local THROTTLE = 0.15  -- 6.6 updates/seg
-            local ultimo = 0
-
-            local function getPlayerParts()
-                local char = plr.Character
-                if not char then return nil end
-                local pp = {}
-                for _, name in ipairs(PART_MAP) do
-                    local p = char:FindFirstChild(name)
-                    if p and p:IsA("BasePart") then
-                        pp[name] = p
-                    end
-                end
-                return pp
+        -- ============ 9. DESANCORA TUDO (welds mantêm grudado) ============
+        for _, p in pairs(parts) do
+            if p and p.Parent then
+                pcall(function() F3X:Unanchor(p) end)
             end
+        end
 
-            while reanimateAtivo do
-                task.wait(0.05)
-
-                local agora = os.clock()
-                if agora - ultimo >= THROTTLE then
-                    ultimo = agora
-                    local pp = getPlayerParts()
-                    if pp then
-                        for name, playerPart in pairs(pp) do
-                            local fakePart = fakeCharParts[name]
-                            if fakePart and fakePart.Parent then
-                                -- posição + rotação
-                                pcall(function()
-                                    F3X:Move(fakePart, playerPart.CFrame)
-                                end)
-                                -- escala (se tamanho mudou)
-                                if (fakePart.Size - playerPart.Size).Magnitude > 0.01 then
-                                    pcall(function()
-                                        F3X:Resize(fakePart, playerPart.Size)
-                                    end)
-                                end
-                                -- cor (se mudou)
-                                if fakePart.Color ~= playerPart.Color then
-                                    pcall(function()
-                                        F3X:SetColor(fakePart, playerPart.Color)
-                                    end)
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-
-        notifySucesso("FakeChar espelho ativo!")
+        notifySucesso("FakeChar soldado no player! Siga normalmente.")
     else
         if not reanimateAtivo then return end
         reanimateAtivo = false
 
-        if reanimateTask then
-            pcall(function() task.cancel(reanimateTask) end)
-            reanimateTask = nil
+        local seBTP = getFork3XEndpoint()
+
+        -- restaura player (visível)
+        local char = plr.Character
+        if char and seBTP then
+            local CORPO = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}
+            for _, name in ipairs(CORPO) do
+                local p = char:FindFirstChild(name)
+                if p and p:IsA("BasePart") then
+                    pcall(function()
+                        seBTP:InvokeServer("SyncMaterial", {{Part = p, Transparency = 0}})
+                    end)
+                end
+            end
         end
 
+        -- destrói FakeChar
         if fakeCharModel then
             pcall(function() fakeCharModel:Destroy() end)
             fakeCharModel = nil
         end
-
         for _, p in pairs(fakeCharParts) do
             if p and p.Parent then
                 pcall(function() F3X:Remove(p) end)
@@ -1025,7 +1051,6 @@ function BG.toggleReanimate(ativar)
 
         _G.BlackGUI.FakeChar = nil
         _G.BlackGUI.FakeCharParts = nil
-        notifyInfo("FakeChar espelho desligado")
+        notifyInfo("FakeChar removido")
     end
-end
-    print("[Jogador] Modulo carregado")
+end print("[Jogador] Modulo carregado")
