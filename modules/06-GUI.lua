@@ -516,5 +516,147 @@ task.spawn(function()
     end
 end)
 
+-- ============== TELA DE LOGIN ==============
+if not temKey then
+    keyAtual = gerarKey()
+    BG.keyAtual = keyAtual
+    salvarKey(keyAtual)
+    print("[BlackGUI] Key gerada: " .. keyAtual)
+
+    local loginGui = Instance.new("ScreenGui")
+    loginGui.Name = "BlackGUI_Login"
+    loginGui.ResetOnSpawn = false
+    loginGui.IgnoreGuiInset = true
+    loginGui.DisplayOrder = 999999
+    loginGui.Parent = CoreGui
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 350, 0, 420)
+    frame.Position = UDim2.new(0.5, -175, 0.5, -210)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BorderSizePixel = 0
+    frame.Parent = loginGui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(40, 180, 70)
+    stroke.Thickness = 2
+    stroke.Parent = frame
+
+    local tit = Instance.new("TextLabel")
+    tit.Size = UDim2.new(1, 0, 0, 50)
+    tit.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+    tit.Text = "🔒 BL5CK GUI KEY"
+    tit.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tit.Font = Enum.Font.GothamBold
+    tit.TextSize = 16
+    tit.Parent = frame
+    Instance.new("UICorner", tit).CornerRadius = UDim.new(0, 12)
+
+    local info = Instance.new("TextLabel")
+    info.Size = UDim2.new(1, -40, 0, 50)
+    info.Position = UDim2.new(0, 20, 0, 60)
+    info.BackgroundTransparency = 1
+    info.Text = "Clique em VER KEY pra copiar a key.\nOu complete as missões."
+    info.TextColor3 = Color3.fromRGB(200, 200, 200)
+    info.Font = Enum.Font.Gotham
+    info.TextSize = 12
+    info.TextWrapped = true
+    info.Parent = frame
+
+    local input = Instance.new("TextBox")
+    input.Size = UDim2.new(1, -40, 0, 40)
+    input.Position = UDim2.new(0, 20, 0, 120)
+    input.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    input.PlaceholderText = "Cole a key aqui..."
+    input.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
+    input.Text = ""
+    input.TextColor3 = Color3.fromRGB(255, 255, 255)
+    input.Font = Enum.Font.GothamBold
+    input.TextSize = 14
+    input.Parent = frame
+    Instance.new("UICorner", input).CornerRadius = UDim.new(0, 8)
+
+    local status = Instance.new("TextLabel")
+    status.Size = UDim2.new(1, -40, 0, 25)
+    status.Position = UDim2.new(0, 20, 0, 165)
+    status.BackgroundTransparency = 1
+    status.Text = ""
+    status.TextColor3 = Color3.fromRGB(255, 100, 100)
+    status.Font = Enum.Font.GothamBold
+    status.TextSize = 11
+    status.Parent = frame
+
+    -- BOTÃO 1: VALIDAR
+    local validar = Instance.new("TextButton")
+    validar.Size = UDim2.new(1, -40, 0, 45)
+    validar.Position = UDim2.new(0, 20, 0, 195)
+    validar.BackgroundColor3 = Color3.fromRGB(20, 60, 30)
+    validar.Text = "✅ VALIDAR KEY"
+    validar.TextColor3 = Color3.fromRGB(255, 255, 255)
+    validar.Font = Enum.Font.GothamBold
+    validar.TextSize = 13
+    validar.Parent = frame
+    Instance.new("UICorner", validar).CornerRadius = UDim.new(0, 8)
+
+    -- BOTÃO 2: VER KEY
+    local verKey = Instance.new("TextButton")
+    verKey.Size = UDim2.new(1, -40, 0, 45)
+    verKey.Position = UDim2.new(0, 20, 0, 250)
+    verKey.BackgroundColor3 = Color3.fromRGB(50, 80, 130)
+    verKey.Text = "🔑 VER KEY"
+    verKey.TextColor3 = Color3.fromRGB(255, 255, 255)
+    verKey.Font = Enum.Font.GothamBold
+    verKey.TextSize = 13
+    verKey.Parent = frame
+    Instance.new("UICorner", verKey).CornerRadius = UDim.new(0, 8)
+
+    -- BOTÃO 3: MISSÕES
+    local missoes = Instance.new("TextButton")
+    missoes.Size = UDim2.new(1, -40, 0, 45)
+    missoes.Position = UDim2.new(0, 20, 0, 305)
+    missoes.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
+    missoes.Text = "🎯 FAZER MISSÕES"
+    missoes.TextColor3 = Color3.fromRGB(255, 255, 255)
+    missoes.Font = Enum.Font.GothamBold
+    missoes.TextSize = 13
+    missoes.Parent = frame
+    Instance.new("UICorner", missoes).CornerRadius = UDim.new(0, 8)
+
+    local validado = false
+
+    validar.MouseButton1Click:Connect(function()
+        if input.Text:upper() == keyAtual then
+            status.Text = "✅ Key válida!"
+            status.TextColor3 = Color3.fromRGB(100, 255, 100)
+            validado = true
+            task.wait(0.5)
+            loginGui:Destroy()
+        else
+            status.Text = "❌ Key inválida!"
+            status.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
+    end)
+
+    verKey.MouseButton1Click:Connect(function()
+        abrirJanelaMostrarKey(keyAtual)
+    end)
+
+    missoes.MouseButton1Click:Connect(function()
+        abrirJanelaMissoes(keyAtual)
+    end)
+
+    while not validado do task.wait(0.1) end
+end
+
+BG._temKey = temKey
+BG._keyAtual = keyAtual
+BG._gerarKey = gerarKey
+BG._salvarKey = salvarKey
+BG._abrirJanelaMostrarKey = abrirJanelaMostrarKey
+BG._abrirJanelaMissoes = abrirJanelaMissoes
+
+print("[Config] Notificações + Key system prontos")
+
 notifySucesso("BL5CK GUI carregada!")
 print("[GUI] Modulo carregado")
