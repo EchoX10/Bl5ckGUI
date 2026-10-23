@@ -365,4 +365,116 @@ function BG.trocarPreset()
     notifyInfo("Preset: " .. currentName)
 end
 
+-- ============== SKYBOX TROLL (animação em frames via BTP) ==============
+local skyTrollAtivo = false
+local skyTrollPart = nil
+local skyTrollTask = nil
+
+local SKY_TROLL_FRAMES = {
+    "rbxassetid://121591621727620",
+    "rbxassetid://88689108671959",
+    "rbxassetid://88627893405665",
+    "rbxassetid://86947772484767",
+}
+
+function BG.toggleSkyTroll(ativar)
+    if ativar then
+        if skyTrollAtivo then return end
+        local seBTP = getFork3XEndpoint()
+        if not seBTP then notifyErro("Building Tools+ nao encontrada!") return end
+
+        skyTrollAtivo = true
+        notifyInfo("Criando SkyBox troll...")
+
+        -- 1) cria a part minúscula no 0,0,0
+        local part = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
+        if not part then
+            notifyErro("Falha ao criar part!")
+            skyTrollAtivo = false
+            return
+        end
+
+        F3X:Resize(part, Vector3.new(0.001, 0.001, 0.001))
+        F3X:SetCollision(part, false)
+        F3X:Anchor(part)
+
+        skyTrollPart = part
+
+        -- 2) cria a mesh vazia via BTP
+        pcall(function()
+            seBTP:InvokeServer("CreateMeshes", {{Part = part}})
+        end)
+        task.wait(0.15)
+
+        -- 3) aplica MeshId vazio + escala negativa gigante
+        pcall(function()
+            seBTP:InvokeServer("SyncMesh", {{
+                Part = part,
+                MeshId = "",
+                TextureId = SKY_TROLL_FRAMES[1],
+                Scale = Vector3.new(-1500, -1500, -1500)
+            }})
+        end)
+        task.wait(0.1)
+
+        -- força local também (garante que o Mesh e a escala estão certos)
+        pcall(function()
+            local mesh = part:FindFirstChildOfClass("SpecialMesh")
+            if mesh then
+                mesh.MeshId = ""
+                mesh.TextureId = SKY_TROLL_FRAMES[1]
+                mesh.Scale = Vector3.new(-1500, -1500, -1500)
+            end
+        end)
+
+        -- 4) loop trocando o TextureId entre frames
+        skyTrollTask = task.spawn(function()
+            local idx = 1
+            while skyTrollAtivo do
+                if not skyTrollPart or not skyTrollPart.Parent then break end
+
+                local id = SKY_TROLL_FRAMES[idx]
+
+                -- atualiza via BTP (server-side, todos veem)
+                pcall(function()
+                    seBTP:InvokeServer("SyncMesh", {{
+                        Part = skyTrollPart,
+                        MeshId = "",
+                        TextureId = id,
+                        Scale = Vector3.new(-1500, -1500, -1500)
+                    }})
+                end)
+
+                -- reforça local (só você vê instantâneo)
+                pcall(function()
+                    local mesh = skyTrollPart:FindFirstChildOfClass("SpecialMesh")
+                    if mesh then
+                        mesh.TextureId = id
+                    end
+                end)
+
+                idx = idx % #SKY_TROLL_FRAMES + 1
+                task.wait(0.15)  -- troca a cada 150ms
+            end
+        end)
+
+        notifySucesso("SkyBox troll ativo!")
+    else
+        if not skyTrollAtivo then return end
+        skyTrollAtivo = false
+
+        if skyTrollTask then
+            pcall(function() task.cancel(skyTrollTask) end)
+            skyTrollTask = nil
+        end
+
+        if skyTrollPart and skyTrollPart.Parent then
+            pcall(function() F3X:Remove(skyTrollPart) end)
+        end
+        skyTrollPart = nil
+
+        notifyInfo("SkyBox troll desligado")
+    end
+end
+
 print("[Visual] Modulo carregado")
