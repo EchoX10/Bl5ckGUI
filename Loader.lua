@@ -38,7 +38,8 @@ local MODULOS = {
     "03-Jogador.lua",
     "04-Visual.lua",
     "05-Mapa.lua",
-    "06-GUI.lua"
+    "06-GUI.lua",
+    "07-Key.lua"
 }
 
 -- =========================================================
