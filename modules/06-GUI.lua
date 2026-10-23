@@ -418,12 +418,15 @@ botaoRedondo.Visible = false
 botaoRedondo.Parent = screenGui
 Instance.new("UICorner", botaoRedondo).CornerRadius = UDim.new(1, 0)
 
+-- tenta criar o stroke com pcall (se falhar, ignora)
 local redondoStroke = Instance.new("UIStroke")
-redondoStroke.Color = Color3.fromRGB(40, 180, 70)
-redondoStroke.Thickness = 2
-redondoStroke.Parent = botaoRedondo
+pcall(function()
+    redondoStroke.Color = Color3.fromRGB(40, 180, 70)
+    redondoStroke.Thickness = 2
+    redondoStroke.Parent = botaoRedondo
+end)
 
--- carrega imagem
+-- carrega imagem do botão
 local function tentarArquivo(p)
     local ok, res = pcall(isfile, p)
     return ok and res
@@ -499,26 +502,6 @@ minBtn.MouseButton1Click:Connect(function()
     TweenService:Create(botaoRedondo, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, 50, 0, 50)
     }):Play()
-end)
-
--- reset no botão redondo (também permite "minimizar")
-botaoRedondo.MouseButton1Click:Connect(function()
-    if draggingRedondo then return end
-    task.wait(0.01)
-    minimizado = false
-end)
-
-closeBtn.MouseButton1Click:Connect(function()
-    pcall(function() BG.desligarMusica() end)
-    pcall(function() BG.desligarHideGuis() end)
-    pcall(function() BG.desligarLimpar() end)
-    pcall(function() BG.pararSpam() end)
-    TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0)
-    }):Play()
-    task.wait(0.35)
-    screenGui:Destroy()
 end)
 
 selecionarAba(1)
