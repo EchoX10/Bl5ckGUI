@@ -46,6 +46,7 @@ local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 38)
 titleBar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
 titleBar.BorderSizePixel = 0
+titleBar.Active = true
 titleBar.ZIndex = 2
 titleBar.Parent = mainFrame
 Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
@@ -128,6 +129,28 @@ contentArea.BackgroundTransparency = 1
 contentArea.BorderSizePixel = 0
 contentArea.ZIndex = 1
 contentArea.Parent = mainFrame
+
+-- ============ DRAG DO PAINEL ============
+local dragging = false
+local dragStart, startPos
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
+end)
+titleBar.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
 
 local abas = {}
 local conteudos = {}
@@ -489,11 +512,7 @@ minBtn.MouseButton1Click:Connect(function()
     if minimizado then return end
     minimizado = true
 
-    TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0)
-    }):Play()
-    task.wait(0.35)
+    -- esconde painel mas MANTÉM o size (só fica invisível)
     mainFrame.Visible = false
 
     botaoRedondo.Position = UDim2.new(0, 20, 0, 20)
@@ -502,6 +521,34 @@ minBtn.MouseButton1Click:Connect(function()
     TweenService:Create(botaoRedondo, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, 50, 0, 50)
     }):Play()
+    end)
+
+    closeBtn.MouseButton1Click:Connect(function()
+    pcall(function() BG.desligarMusica() end)
+    pcall(function() BG.desligarHideGuis() end)
+    pcall(function() BG.desligarLimpar() end)
+    pcall(function() BG.pararSpam() end)
+    TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    task.wait(0.35)
+    screenGui:Destroy()
+end)
+
+-- clica no botão redondo = volta painel
+botaoRedondo.MouseButton1Click:Connect(function()
+    TweenService:Create(botaoRedondo, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 0, 0, 0)
+    }):Play()
+    task.wait(0.35)
+    botaoRedondo.Visible = false
+
+    -- restaura o painel do mesmo jeito que ele foi criado
+    mainFrame.Visible = true
+    mainFrame.Size = TAMANHO_PAINEL
+    mainFrame.Position = POSICAO_PAINEL
+    minimizado = false
 end)
 
 selecionarAba(1)
@@ -645,9 +692,6 @@ if not BG._temKey then
 
     while not validado do task.wait(0.1) end
 end
-
-notifySucesso("BL5CK GUI carregada!")
-print("[GUI] Modulo carregado")
 
 notifySucesso("BL5CK GUI carregada!")
 print("[GUI] Modulo carregado")
