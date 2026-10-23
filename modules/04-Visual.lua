@@ -408,7 +408,7 @@ function BG.toggleSkyTroll(ativar)
             return
         end
 
-        F3X:Resize(part, Vector3.new(5000, 5000, 5000))
+        F3X:Resize(part, Vector3.new(0.001, 0.001, 0.001))
         F3X:SetCollision(part, false)
         F3X:Anchor(part)
         pcall(function() part.Transparency = 0 end)
