@@ -3,14 +3,14 @@
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:000000,100:1a1a1a&height=200&section=header&text=BL5CK%20GUI&fontSize=70&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Painel%20Completo%20para%20Executores%20Roblox&descAlignY=58&descSize=18" />
 
 [![Status](https://img.shields.io/badge/STATUS-ONLINE-22c55e?style=for-the-badge&labelColor=000000)](#)
-[![Version](https://img.shields.io/badge/VERSION-v1.0.0-3b82f6?style=for-the-badge&labelColor=000000)](#)
+[![Version](https://img.shields.io/badge/VERSION-v1.1.0-3b82f6?style=for-the-badge&labelColor=000000)](#)
 [![Type](https://img.shields.io/badge/TYPE-EXECUTOR-8b5cf6?style=for-the-badge&labelColor=000000)](#)
 [![Platform](https://img.shields.io/badge/PLATFORM-MOBILE%20%2B%20PC-f59e0b?style=for-the-badge&labelColor=000000)](#)
 [![License](https://img.shields.io/badge/LICENSE-MIT-ef4444?style=for-the-badge&labelColor=000000)](#-licença)
 
-**Painel modular para Roblox com integração HD Admin + Building Tools+**
+**Painel modular para Roblox com HD Admin + Building Tools+ · Auto-Update · UserModules**
 
-[🚀 Instalação](#-instalação) · [📖 Como Usar](#-como-usar) · [✨ Features](#-features) · [🔑 Key System](#-key-system) · [❓ FAQ](#-faq)
+[🚀 Instalação](#-instalação) · [📖 Como Usar](#-como-usar) · [🔑 Key System](#-key-system) · [🧩 UserModules](#-usermodules) · [❓ FAQ](#-faq)
 
 ---
 
@@ -20,12 +20,13 @@
 
 **BL5CK GUI** é um painel completo para executores Roblox, projetado para funcionar em qualquer jogo que tenha **HD Admin** instalado e, opcionalmente, a tool **Building Tools+ (F3X)** para funções de construção server-side.
 
-O projeto é dividido em **módulos independentes** carregados dinamicamente via `Loader.lua`. Isso significa que:
+O projeto é dividido em **módulos independentes** carregados dinamicamente via `Loader.lua`, com **cache local** no disco do executor e **sistema de atualização automática**.
 
-- 🔄 **Atualizações instantâneas** — você edita no GitHub, o usuário pega automático
-- 🧩 **Manutenção fácil** — cada feature em seu próprio arquivo
-- 🐛 **Debug rápido** — se der erro, você sabe exatamente qual módulo quebrou
-- ⚡ **Leve** — só carrega o que precisa
+- 🔄 **Auto-Update** — o Loader compara os arquivos locais com o GitHub e avisa quando tem versão nova
+- 📦 **Cache local** — depois do primeiro download, os módulos ficam salvos em `Bl5ckGUI/modules/`
+- 🧩 **UserModules** — qualquer arquivo `.lua` em `Bl5ckGUI/UserModules/` é carregado automaticamente
+- ⚡ **Auto-execute** — integração com `queue_on_teleport`
+- 🎨 **Tema AMOLED** — interface preta com verde neon
 
 ---
 
@@ -34,8 +35,6 @@ O projeto é dividido em **módulos independentes** carregados dinamicamente via
 <div align="center">
 
 <img src="https://raw.githubusercontent.com/EchoX10/Bl5ckGUI/main/assets/preview.png" width="800" />
-
-*Interface com tema AMOLED preto, abas horizontais e notificações animadas.*
 
 </div>
 
@@ -51,7 +50,14 @@ O projeto é dividido em **módulos independentes** carregados dinamicamente via
 loadstring(game:HttpGet("https://raw.githubusercontent.com/EchoX10/Bl5ckGUI/main/Loader.lua"))()
 ```
 
-**Passo 3.** O painel vai abrir automaticamente. Se for a primeira vez, vai aparecer a **tela de login** pedindo a key.
+**Passo 3.** O Loader vai:
+
+1. Verificar atualização (janela SIM/NÃO se tiver)
+2. Criar as pastas `Bl5ckGUI/`
+3. Baixar os módulos que faltam
+4. Baixar os assets
+5. Carregar os módulos do disco
+6. Mostrar login (só se não tiver key salva)
 
 ---
 
@@ -60,124 +66,82 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/EchoX10/Bl5ckGUI/main
 ### Primeira vez
 
 1. Execute o Loader
-2. Aparece a tela de login
-3. Uma key aleatória é gerada e mostrada **no console do executor** (F9 no PC)
-4. Copie a key
-5. Cole no campo e clique em **VALIDAR KEY**
+2. O painel carrega primeiro
+3. A **tela de login** aparece por cima
+4. Uma key aleatória é gerada e mostrada **no console do executor** (F9 no PC)
+5. Copie e cole no campo, clique em **VALIDAR KEY**
 
 ### Sem console? Use as missões
 
-Se você não consegue ver o console (comum em celular), clique em **🎯 FAZER MISSÕES**:
+Clique em **🎯 FAZER MISSÕES**:
 
 | Missão | O que fazer |
 |--------|-------------|
-| **1. Matemática Rápida** | Resolva 5 contas em 10s cada (precisa acertar 4) |
-| **2. Digite a Frase** | Digite 3 frases exatamente como aparecem |
-| **3. Complete a Frase** | Complete 4 frases sobre o painel (precisa acertar 3) |
+| **1. Matemática Rápida** | 5 contas em 10s cada (acertar 4) |
+| **2. Digite a Frase** | 3 frases exatas |
+| **3. Complete a Frase** | 4 frases (acertar 3) |
 
-Ao terminar as 3, clique em **🔑 COPIAR KEY E VOLTAR**. A key vai pro clipboard automaticamente.
+Ao terminar, clique em **🔑 VER KEY** — a key vai pro clipboard.
 
 ### Depois de validar
 
-A key fica salva por **35 minutos** em arquivo local. Depois disso, você precisa gerar nova. Não precisa refazer as missões toda vez que abrir o painel.
+A key fica salva por **35 minutos** em `Bl5ckGUI/key/blackgui_key.txt`. Não precisa refazer as missões.
 
----
+### Atualizações
 
-## ✨ Features
+Quando tiver versão nova no GitHub, aparece uma janela:
 
-### 👤 Aba Jogador
-
-<table>
-<tr>
-<td width="50%">
-
-**🔫 Clone Personagem + Arma**
-- Cria um clone visível do seu personagem
-- Sistema de arma funcional (atira projéteis)
-- Animações de caminhada, pulo e cabeça seguindo o mouse
-- Fica invisível enquanto o clone tá ativo
-
-**🧟 Zumbi**
-- Transforma seu personagem em zumbi
-- Dá dano automático em quem encostar
-- Sistema de auto-reconstrução se for destruído
-
-**👻 Tool Invisible**
-- Toggle invisível/visível
-- Tool na mochila para ativar/desativar
-
-</td>
-<td width="50%">
-
-**🔨 Tool Hacker**
-- Tool que deleta players ao clicar
-- Matar + explodir + respawnar server-side
-
-**😈 Modo Tóxico (Anti-Un)**
-- Seleciona um alvo
-- Loop com ice, jail, title, warp, blur, punish
-- Sistema anti-un (se alguém remover o efeito, reaplica)
-
-**📦 Armadilha de Jogador**
-- Teleporta o alvo para uma jaula fechada
-- Depois te teleporta de volta pro local original
-
-**⚡ Comandos em Jogador**
-- Lista rápida: heal, kill, jail, ice, blur, warp, freeze, dmg
-
-</td>
-</tr>
-</table>
-
-### 👁️ Aba Visual
-
-| Feature | Descrição |
-|---------|-----------|
-| **✨ Spam de Partículas** | Cria partes texturizadas ao redor de todo mundo |
-| **👻 Esconder GUIs + Mutar** | Aplica hideGuis, uncmdbar2 e mute em "others" |
-| **🧹 Limpar Efeitos (loop)** | Limpa ice/jail/blur/title a cada 3s |
-| **🎆 Partículas Server-Side** | Aplica ParticleEmitter texturizado em todas as partes (via Building Tools+) |
-| **🌠 Mesh Glitch (-3500)** | Aplica escala negativa gigante numa parte |
-| **🎨 Texturizar Mapa** | Aplica textura em todas as partes do mapa |
-| **🎨 Colorir Mapa** | Pinta cada parte de uma cor aleatória |
-
-### 🗺️ Aba Mapa
-
-| Feature | Descrição |
-|---------|-----------|
-| **🎯 Sistema Obby** | Cria um obby completo com KillBricks e WinPart |
-| **🌪️ Natural Disaster** | Baixa blueprint de mapa externo e constrói |
-| **🗺️ Mapa Rápido** | Limpa + constrói um mapa pequeno de teste |
-| **💣 Metero Áudio** | Contagem → parte cai do céu → música toca → esferas crescem |
-| **☄️ Meteorito Gigante** | Parte gigante cai e explode em bola vermelha |
-| **🏳️ Bandeira Colorida** | Constrói bandeira de 7 cores |
-| **🤖 NPC Controlável** | NPC que você controla com setas |
-
-### ⚙️ Aba Admin
-
-- **👋 Boas Vindas Automáticas** — serverHint pra quem entra
-- **🇧🇷 Título BL5CK** — aplica título em você
-- **📢 Enviar serverMessage** — textbox pra mandar mensagem global
-
-### 🎵 Aba Mídia
-
-- **17 presets de música** (phonk, JET 2, keemstar, etc.)
-- **Loop automático** — se a música parar, reinicia
-- **Trocar preset** com botão giratório
-- **Sliders** de pitch e volume
-- **🌈 DISCO + FOG + TIME 0** — efeitos visuais globais
+- **✅ SIM** — baixa e sobrescreve os módulos locais
+- **❌ NÃO** — usa os locais (pergunta de novo na próxima execução)
 
 ---
 
 ## 🔑 Key System
 
-O sistema de key foi feito pra ser **anti-force**:
+Módulo separado (`07-Key.lua`), **anti-force**:
 
-- 🔐 Key de **16 caracteres** gerada aleatoriamente
+- 🔐 Key de **16 caracteres** aleatória
 - ⏱️ Expira em **35 minutos**
-- 💾 Salva em **arquivo local** (`blackgui_key.txt`) — sobrevive a re-exec
-- 🎯 Missões anti-bot (matemática + digitação + completar)
-- 🚫 **Não funciona com auto-solver** porque a key é aleatória por sessão
+- 💾 Salva em `Bl5ckGUI/key/blackgui_key.txt`
+- 🎯 Missões anti-bot
+- ⏰ Login **só aparece depois** do painel carregar
+
+---
+
+## 🧩 UserModules
+
+Coloque qualquer arquivo `.lua` em `Bl5ckGUI/UserModules/` e ele é carregado automaticamente em sandbox.
+
+**Sistema de tracking:** cada arquivo que cria funções em `BG.*`, GUIs ou conexões é registrado em:
+
+- `Bl5ckGUI/UserModulesFunctions/FunctionNames.json`
+- `Bl5ckGUI/UserModulesFunctions/FunctionCodes.json`
+
+Quando você **apaga** o arquivo, o Loader remove só o que **aquele** arquivo adicionou — sem afetar outros UserModules nem o painel base.
+
+**Trackers disponíveis:**
+- `trackGui(gui)` — registra ScreenGui
+- `trackConn(conn)` — registra conexão
+- `trackFunc(nome)` — registra função em `BG`
+
+**Exemplo:**
+
+```lua
+BG.configButtonFunc = function()
+    print("Config clicado!")
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Parent = game:GetService("CoreGui")
+trackGui(gui)
+
+local btn = Instance.new("TextButton")
+btn.Text = "Config"
+btn.Parent = gui
+
+local conn = btn.MouseButton1Click:Connect(BG.configButtonFunc)
+trackConn(conn)
+```
 
 ---
 
@@ -186,25 +150,42 @@ O sistema de key foi feito pra ser **anti-force**:
 ```
 Bl5ckGUI/
 │
-├── 📄 README.md              ← você está aqui
-├── 📄 Loader.lua             ← ponto de entrada
+├── 📄 README.md
+├── 📄 Loader.lua
 │
-└── 📁 modules/
-    ├── 📄 01-Config.lua      → Config global + Notificações + Key system
-    ├── 📄 02-Core.lua        → F3X Wrapper + HD Admin + Helpers
-    ├── 📄 03-Jogador.lua     → Clone + Zumbi + Tools + Tóxico
-    ├── 📄 04-Visual.lua      → Spam + Partículas + Texturizar + Colorir
-    ├── 📄 05-Mapa.lua        → Obby + NPC + Meteorito + Disaster
-    └── 📄 06-GUI.lua         → Sistema de abas + todos os botões
+├── 📁 modules/
+│   ├── 📄 01-Config.lua
+│   ├── 📄 02-Core.lua
+│   ├── 📄 03-Jogador.lua
+│   ├── 📄 04-Visual.lua
+│   ├── 📄 05-Mapa.lua
+│   ├── 📄 06-GUI.lua
+│   └── 📄 07-Key.lua
+│
+├── 📁 bl5ckguiassets/
+│   ├── 📄 README.md
+│   └── 🖼️ Button_Img.png
+│
+└── 📁 assets/
+    └── 🖼️ preview.png
 ```
 
-**Ordem de carregamento importa.** Cada módulo depende do que veio antes (`_G.BlackGUI` é a tabela compartilhada).
+**No disco do executor** (criado pelo Loader):
+
+```
+Bl5ckGUI/
+├── modules/
+├── key/
+├── assets/
+├── UserModules/
+├── UserModulesFunctions/
+├── loader_autoload.lua
+└── autoexec.flag
+```
 
 ---
 
 ## 🛠️ Como Contribuir
-
-Achou um bug ou quer adicionar feature?
 
 1. Fork o repo
 2. Crie uma branch: `git checkout -b feature/minha-feature`
@@ -212,7 +193,7 @@ Achou um bug ou quer adicionar feature?
 4. Push: `git push origin feature/minha-feature`
 5. Abre Pull Request
 
-Ou abre uma [issue](https://github.com/EchoX10/Bl5ckGUI/issues) descrevendo o problema.
+Ou abre uma [issue](https://github.com/EchoX10/Bl5ckGUI/issues).
 
 ---
 
@@ -221,74 +202,79 @@ Ou abre uma [issue](https://github.com/EchoX10/Bl5ckGUI/issues) descrevendo o pr
 <details>
 <summary><b>O painel não abre. O que fazer?</b></summary>
 
-Verifica se o executor tem `loadstring` e `game:HttpGet`. Alguns executores antigos (Delta antigo, Krnl antigo) têm limitações. Roda isso no console pra checar:
+Roda no console:
 
 ```lua
 print("loadstring:", type(loadstring))
 print("HttpGet:", type(game.HttpGet))
+print("writefile:", type(writefile))
+print("readfile:", type(readfile))
+print("isfile:", type(isfile))
+print("makefolder:", type(makefolder))
 ```
 
 Se algum voltar `nil`, troca de executor.
 </details>
 
 <details>
-<summary><b>A key não aparece no console.</b></summary>
+<summary><b>A janela de atualização fica aparecendo toda vez.</b></summary>
 
-Alguns executores escondem o console por padrão. Abre manualmente:
-- **PC:** F9
-- **Delta mobile:** menu do executor → "Output" ou "Console"
-- **Alternativa:** clica em **FAZER MISSÕES** e pega pelo botão de copiar
+Você clicou **❌ NÃO** mas os módulos locais continuam diferentes. Soluções:
+- Clica em **✅ SIM** pra atualizar
+- Ou apaga `Bl5ckGUI/modules/` pra forçar download limpo
 </details>
 
 <details>
-<summary><b>Funciona em qualquer jogo?</b></summary>
+<summary><b>O auto-execute não funciona ao trocar de jogo.</b></summary>
 
-**Depende.** Funções de HD Admin precisam que o jogo tenha **HD Admin** instalado. Funções de construção (partículas, NPC, mesh) precisam da tool **Building Tools+**.
-
-Se o jogo não tem essas coisas, só as funções nativas do painel vão funcionar.
+`queue_on_teleport` **só dispara em server hop**, não em troca de jogo pelo menu. Ativa o **Auto Execute nativo do executor** e coloca o comando do Loader lá.
 </details>
 
 <details>
-<summary><b>O Clone não pega no meu personagem.</b></summary>
+<summary><b>Um UserModule meu quebrou o painel.</b></summary>
 
-A tool **Building Tools+** precisa estar no teu Backpack. Se não tiver, o painel não consegue criar as partes server-side.
+UserModules rodam em `pcall` — se quebrar, é ignorado e o painel base continua. Se quiser remover: apaga o arquivo em `Bl5ckGUI/UserModules/` e roda o Loader de novo.
 </details>
 
 <details>
-<summary><b>Por que a key expira em 35 minutos?</b></summary>
+<summary><b>Onde ficam os arquivos no celular?</b></summary>
 
-É o tempo que o servidor do Roblox mantém a sessão ativa em muitos jogos. Depois disso, você geralmente já foi kickado ou o painel parou de funcionar. Se quiser mudar, edita `TEMPO_EXPIRACAO` no `01-Config.lua`.
+No disco interno do executor, em `Bl5ckGUI/`. Não é na pasta do Roblox.
 </details>
 
 <details>
-<summary><b>Como adiciono mais música nos presets?</b></summary>
+<summary><b>Posso aumentar o tempo da key?</b></summary>
 
-Edita o array `MUSIC_PRESETS` no `04-Visual.lua`. Formato:
+Sim. Edita `TEMPO_EXPIRACAO` no `07-Key.lua`:
 
 ```lua
-{id = ID_DA_MUSICA, vol = 9999, pitch = 0.8, nome = "Nome"}
+local TEMPO_EXPIRACAO = 35 * 60  -- segundos
 ```
-</details>
-
-<details>
-<summary><b>Tem versão PC?</b></summary>
-
-Sim. O mesmo Loader funciona em qualquer executor PC (Synapse, Script-Ware, Krnl, Fluxus PC, Wave PC, etc.). A interface foi feita pra funcionar em ambas plataformas.
 </details>
 
 ---
 
 ## 📋 Changelog
 
+### v1.1.0
+- ✅ Auto-Update com janela SIM/NÃO
+- ✅ Cache local dos módulos
+- ✅ UserModules com tracking
+- ✅ Auto-execute via `queue_on_teleport`
+- ✅ Key system separado (`07-Key.lua`)
+- ✅ Botão redondo minimizar
+- ✅ Tweens em tudo
+- ✅ Reanimate (FakeChar)
+- ✅ Arma anexa no braço do FakeChar
+- ✅ `BG.PartCframe` / `BG.RemoveCframe`
+
 ### v1.0.0 (Inicial)
 - ✅ Sistema de key com missões
-- ✅ Notificações animadas com som
-- ✅ Wrapper F3X + integração HD Admin
-- ✅ Clone com arma e sistema de tiro
-- ✅ Modo Tóxico com anti-un
-- ✅ Sistema de partículas server-side via Building Tools+
-- ✅ Obby + NPC + Meteorito + Natural Disaster
-- ✅ Sistema de abas AMOLED
+- ✅ Notificações animadas
+- ✅ Wrapper F3X + HD Admin
+- ✅ Clone, Zumbi, Tool Hacker, Modo Tóxico
+- ✅ Partículas, Obby, NPC, Meteorito
+- ✅ Tema AMOLED
 
 ---
 
@@ -298,7 +284,7 @@ Este projeto é disponibilizado **apenas para fins educacionais** e para uso em 
 
 - ❌ **Não use** em jogos competitivos ou com outros jogadores sem consentimento
 - ❌ **Não me responsabilizo** por bans, kicks ou qualquer consequência
-- ✅ **Use com moderação** e respeito à comunidade
+- ✅ **Use com moderação**
 
 A utilização de executores é contra os Termos de Serviço da Roblox. Use por sua conta e risco.
 
