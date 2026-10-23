@@ -308,6 +308,7 @@ end, tab2)
 criarToggle("Partículas", function(e)
     if e then BG.ligarParticulas() else BG.desligarParticulas() end
 end, tab2)
+criarToggle("SkyBox Troll", function(e) BG.toggleSkyTroll(e) end, tab2)
 criarBotao("Skybox", BG.botaoMeshGlitch, tab2)
 criarBotao("Texturizar Mapa", BG.botaoTexturizarTudo, tab2)
 criarBotao("Colorir Mapa Todo", BG.botaoColorirMapa, tab2)
@@ -440,14 +441,6 @@ botaoRedondo.BorderSizePixel = 0
 botaoRedondo.Visible = false
 botaoRedondo.Parent = screenGui
 Instance.new("UICorner", botaoRedondo).CornerRadius = UDim.new(1, 0)
-
--- tenta criar o stroke com pcall (se falhar, ignora)
-local redondoStroke = Instance.new("UIStroke")
-pcall(function()
-    redondoStroke.Color = Color3.fromRGB(40, 180, 70)
-    redondoStroke.Thickness = 2
-    redondoStroke.Parent = botaoRedondo
-end)
 
 -- carrega imagem do botão
 local function tentarArquivo(p)
