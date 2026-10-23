@@ -399,9 +399,8 @@ function BG.toggleSkyTroll(ativar)
         skyTrollAtivo = true
         notifyInfo("Criando SkyBox troll...")
 
-        -- 1) Cria Part gigante centrada na posição do player
-        local hrp = plr.Character.HumanoidRootPart
-        local part = F3X:CreatePart("Normal", CFrame.new(hrp.Position), workspace)
+        -- 1) Cria Part gigante no centro do mapa
+        local part = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
         if not part then
             notifyErro("Falha ao criar part!")
             skyTrollAtivo = false
