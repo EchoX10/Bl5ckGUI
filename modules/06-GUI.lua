@@ -489,23 +489,6 @@ game:GetService("UserInputService").InputEnded:Connect(function(input)
     end
 end)
 
--- clica no botão redondo = volta painel
-botaoRedondo.MouseButton1Click:Connect(function()
-    TweenService:Create(botaoRedondo, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 0, 0, 0)
-    }):Play()
-    task.wait(0.35)
-    botaoRedondo.Visible = false
-
-    mainFrame.Visible = true
-    mainFrame.Size = UDim2.new(0, 0, 0, 0)
-    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = TAMANHO_PAINEL,
-        Position = POSICAO_PAINEL
-    }):Play()
-end)
-
 -- minimizar
 local minimizado = false
 minBtn.MouseButton1Click:Connect(function()
@@ -519,11 +502,11 @@ minBtn.MouseButton1Click:Connect(function()
     botaoRedondo.Size = UDim2.new(0, 0, 0, 0)
     botaoRedondo.Visible = true
     TweenService:Create(botaoRedondo, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 50, 0, 50)
+    Size = UDim2.new(0, 50, 0, 50)
     }):Play()
-    end)
+end)
 
-    closeBtn.MouseButton1Click:Connect(function()
+   closeBtn.MouseButton1Click:Connect(function()
     pcall(function() BG.desligarMusica() end)
     pcall(function() BG.desligarHideGuis() end)
     pcall(function() BG.desligarLimpar() end)
