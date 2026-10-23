@@ -365,7 +365,7 @@ function BG.trocarPreset()
     notifyInfo("Preset: " .. currentName)
 end
 
--- ============== SKYBOX TROLL (animação em frames via BTP) ==============
+-- ============== SKYBOX TROLL (textura em todas as faces) ==============
 local skyTrollAtivo = false
 local skyTrollPart = nil
 local skyTrollTask = nil
@@ -377,84 +377,102 @@ local SKY_TROLL_FRAMES = {
     "rbxassetid://86947772484767",
 }
 
+local SKY_TROLL_FACES = {
+    Enum.NormalId.Front,
+    Enum.NormalId.Back,
+    Enum.NormalId.Left,
+    Enum.NormalId.Right,
+    Enum.NormalId.Top,
+    Enum.NormalId.Bottom,
+}
+
 function BG.toggleSkyTroll(ativar)
     if ativar then
         if skyTrollAtivo then return end
         local seBTP = getFork3XEndpoint()
         if not seBTP then notifyErro("Building Tools+ nao encontrada!") return end
+        if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+            notifyErro("Character nao encontrado!")
+            return
+        end
 
         skyTrollAtivo = true
         notifyInfo("Criando SkyBox troll...")
 
-        -- 1) cria a part minúscula no 0,0,0
-        local part = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
+        -- 1) Cria Part gigante centrada na posição do player
+        local hrp = plr.Character.HumanoidRootPart
+        local part = F3X:CreatePart("Normal", CFrame.new(hrp.Position), workspace)
         if not part then
             notifyErro("Falha ao criar part!")
             skyTrollAtivo = false
             return
         end
 
-        F3X:Resize(part, Vector3.new(0.001, 0.001, 0.001))
+        F3X:Resize(part, Vector3.new(5000, 5000, 5000))
         F3X:SetCollision(part, false)
         F3X:Anchor(part)
+        pcall(function() part.Transparency = 0 end)
+        pcall(function() part.Material = Enum.Material.SmoothPlastic end)
 
         skyTrollPart = part
 
-        -- 2) cria a mesh vazia via BTP
-        pcall(function()
-            seBTP:InvokeServer("CreateMeshes", {{Part = part}})
-        end)
-        task.wait(0.15)
+        -- 2) Aplica CreateTextures em todas as 6 faces via BTP
+        for _, face in ipairs(SKY_TROLL_FACES) do
+            pcall(function()
+                seBTP:InvokeServer("CreateTextures", {{
+                    Part = part,
+                    Face = face,
+                    TextureType = "Decal"
+                }})
+            end)
+            task.wait(0.05)
+        end
+        task.wait(0.2)
 
-        -- 3) aplica MeshId vazio + escala negativa gigante
-        pcall(function()
-            seBTP:InvokeServer("SyncMesh", {{
-                Part = part,
-                MeshId = "",
-                TextureId = SKY_TROLL_FRAMES[1],
-                Scale = Vector3.new(-1500, -1500, -1500)
-            }})
-        end)
-        task.wait(0.1)
+        -- 3) Aplica o primeiro frame em todas as faces
+        for _, face in ipairs(SKY_TROLL_FACES) do
+            pcall(function()
+                seBTP:InvokeServer("SyncTexture", {{
+                    Part = part,
+                    Face = face,
+                    TextureType = "Decal",
+                    Texture = SKY_TROLL_FRAMES[1]
+                }})
+            end)
+            task.wait(0.05)
+        end
 
-        -- força local também (garante que o Mesh e a escala estão certos)
-        pcall(function()
-            local mesh = part:FindFirstChildOfClass("SpecialMesh")
-            if mesh then
-                mesh.MeshId = ""
-                mesh.TextureId = SKY_TROLL_FRAMES[1]
-                mesh.Scale = Vector3.new(-1500, -1500, -1500)
-            end
-        end)
-
-        -- 4) loop trocando o TextureId entre frames
+        -- 4) Loop trocando o frame em todas as faces
         skyTrollTask = task.spawn(function()
             local idx = 1
             while skyTrollAtivo do
                 if not skyTrollPart or not skyTrollPart.Parent then break end
 
-                local id = SKY_TROLL_FRAMES[idx]
-
-                -- atualiza via BTP (server-side, todos veem)
-                pcall(function()
-                    seBTP:InvokeServer("SyncMesh", {{
-                        Part = skyTrollPart,
-                        MeshId = "",
-                        TextureId = id,
-                        Scale = Vector3.new(-1500, -1500, -1500)
-                    }})
-                end)
-
-                -- reforça local (só você vê instantâneo)
-                pcall(function()
-                    local mesh = skyTrollPart:FindFirstChildOfClass("SpecialMesh")
-                    if mesh then
-                        mesh.TextureId = id
+                -- Atualiza posição pra seguir o player (opcional)
+                local char = plr.Character
+                if char then
+                    local h = char:FindFirstChild("HumanoidRootPart")
+                    if h then
+                        pcall(function() F3X:Move(skyTrollPart, CFrame.new(h.Position)) end)
                     end
-                end)
+                end
 
                 idx = idx % #SKY_TROLL_FRAMES + 1
-                task.wait(0.15)  -- troca a cada 150ms
+                local id = SKY_TROLL_FRAMES[idx]
+
+                for _, face in ipairs(SKY_TROLL_FACES) do
+                    pcall(function()
+                        seBTP:InvokeServer("SyncTexture", {{
+                            Part = skyTrollPart,
+                            Face = face,
+                            TextureType = "Decal",
+                            Texture = id
+                        }})
+                    end)
+                    task.wait(0.02)
+                end
+
+                task.wait(0.1)
             end
         end)
 
