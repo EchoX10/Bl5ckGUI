@@ -365,25 +365,17 @@ function BG.trocarPreset()
     notifyInfo("Preset: " .. currentName)
 end
 
--- ============== SKYBOX TROLL (textura em todas as faces) ==============
+-- ============== SKYBOX TROLL (FileMesh + TextureId trocando) ==============
 local skyTrollAtivo = false
 local skyTrollPart = nil
 local skyTrollTask = nil
+local SKY_TROLL_MESH_ID = "rbxassetid://87422988489722"
 
 local SKY_TROLL_FRAMES = {
     "rbxassetid://121591621727620",
     "rbxassetid://88689108671959",
     "rbxassetid://88627893405665",
     "rbxassetid://86947772484767",
-}
-
-local SKY_TROLL_FACES = {
-    Enum.NormalId.Front,
-    Enum.NormalId.Back,
-    Enum.NormalId.Left,
-    Enum.NormalId.Right,
-    Enum.NormalId.Top,
-    Enum.NormalId.Bottom,
 }
 
 function BG.toggleSkyTroll(ativar)
@@ -395,7 +387,7 @@ function BG.toggleSkyTroll(ativar)
         skyTrollAtivo = true
         notifyInfo("Criando SkyBox troll...")
 
-        -- 1) Cria Part 0.001 no 0,0,0
+        -- 1) Cria Part minúscula no 0,0,0
         local part = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
         if not part then
             notifyErro("Falha ao criar part!")
@@ -406,6 +398,7 @@ function BG.toggleSkyTroll(ativar)
         F3X:Resize(part, Vector3.new(0.001, 0.001, 0.001))
         F3X:SetCollision(part, false)
         F3X:Anchor(part)
+        pcall(function() part.Transparency = 0 end)
         skyTrollPart = part
 
         -- 2) Cria Mesh via BTP
@@ -414,11 +407,11 @@ function BG.toggleSkyTroll(ativar)
         end)
         task.wait(0.15)
 
-        -- 3) Aplica mesh vazia + scale negativo + primeiro frame
+        -- 3) Aplica FileMesh com mesh ID + scale negativo + primeiro frame
         pcall(function()
             seBTP:InvokeServer("SyncMesh", {{
                 Part = part,
-                MeshId = "",
+                MeshId = SKY_TROLL_MESH_ID,
                 TextureId = SKY_TROLL_FRAMES[1],
                 Scale = Vector3.new(-1500, -1500, -1500)
             }})
@@ -429,7 +422,8 @@ function BG.toggleSkyTroll(ativar)
         pcall(function()
             local mesh = part:FindFirstChildOfClass("SpecialMesh")
             if mesh then
-                mesh.MeshId = ""
+                mesh.MeshType = Enum.MeshType.FileMesh
+                mesh.MeshId = SKY_TROLL_MESH_ID
                 mesh.TextureId = SKY_TROLL_FRAMES[1]
                 mesh.Scale = Vector3.new(-1500, -1500, -1500)
             end
@@ -447,7 +441,7 @@ function BG.toggleSkyTroll(ativar)
                 pcall(function()
                     seBTP:InvokeServer("SyncMesh", {{
                         Part = skyTrollPart,
-                        MeshId = "",
+                        MeshId = SKY_TROLL_MESH_ID,
                         TextureId = id,
                         Scale = Vector3.new(-1500, -1500, -1500)
                     }})
