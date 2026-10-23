@@ -516,11 +516,11 @@ task.spawn(function()
     end
 end)
 
--- ============== TELA DE LOGIN ==============
-if not temKey then
-    keyAtual = gerarKey()
-    BG.keyAtual = keyAtual
-    salvarKey(keyAtual)
+-- ============== TELA DE LOGIN (só depois do loading) ==============
+if not BG._temKey then
+    local keyAtual = BG._gerarKey()
+    BG._keyAtual = keyAtual
+    BG._salvarKey(keyAtual)
     print("[BlackGUI] Key gerada: " .. keyAtual)
 
     local loginGui = Instance.new("ScreenGui")
@@ -587,7 +587,6 @@ if not temKey then
     status.TextSize = 11
     status.Parent = frame
 
-    -- BOTÃO 1: VALIDAR
     local validar = Instance.new("TextButton")
     validar.Size = UDim2.new(1, -40, 0, 45)
     validar.Position = UDim2.new(0, 20, 0, 195)
@@ -599,7 +598,6 @@ if not temKey then
     validar.Parent = frame
     Instance.new("UICorner", validar).CornerRadius = UDim.new(0, 8)
 
-    -- BOTÃO 2: VER KEY
     local verKey = Instance.new("TextButton")
     verKey.Size = UDim2.new(1, -40, 0, 45)
     verKey.Position = UDim2.new(0, 20, 0, 250)
@@ -611,7 +609,6 @@ if not temKey then
     verKey.Parent = frame
     Instance.new("UICorner", verKey).CornerRadius = UDim.new(0, 8)
 
-    -- BOTÃO 3: MISSÕES
     local missoes = Instance.new("TextButton")
     missoes.Size = UDim2.new(1, -40, 0, 45)
     missoes.Position = UDim2.new(0, 20, 0, 305)
@@ -639,24 +636,15 @@ if not temKey then
     end)
 
     verKey.MouseButton1Click:Connect(function()
-        abrirJanelaMostrarKey(keyAtual)
+        BG._abrirJanelaMostrarKey(keyAtual)
     end)
 
     missoes.MouseButton1Click:Connect(function()
-        abrirJanelaMissoes(keyAtual)
+        BG._abrirJanelaMissoes(keyAtual)
     end)
 
     while not validado do task.wait(0.1) end
 end
-
-BG._temKey = temKey
-BG._keyAtual = keyAtual
-BG._gerarKey = gerarKey
-BG._salvarKey = salvarKey
-BG._abrirJanelaMostrarKey = abrirJanelaMostrarKey
-BG._abrirJanelaMissoes = abrirJanelaMissoes
-
-print("[Config] Notificações + Key system prontos")
 
 notifySucesso("BL5CK GUI carregada!")
 print("[GUI] Modulo carregado")
