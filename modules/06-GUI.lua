@@ -584,6 +584,70 @@ if not BG._temKey then
     status.Text = ""
     status.TextColor3 = Color3.fromRGB(255, 100, 100)
     status.Font = Enum.Font.GothamBold
+    status.TextSize = 11
+    status.Parent = frame
+
+    local validar = Instance.new("TextButton")
+    validar.Size = UDim2.new(1, -40, 0, 45)
+    validar.Position = UDim2.new(0, 20, 0, 195)
+    validar.BackgroundColor3 = Color3.fromRGB(20, 60, 30)
+    validar.Text = "✅ VALIDAR KEY"
+    validar.TextColor3 = Color3.fromRGB(255, 255, 255)
+    validar.Font = Enum.Font.GothamBold
+    validar.TextSize = 13
+    validar.Parent = frame
+    Instance.new("UICorner", validar).CornerRadius = UDim.new(0, 8)
+
+    local verKey = Instance.new("TextButton")
+    verKey.Size = UDim2.new(1, -40, 0, 45)
+    verKey.Position = UDim2.new(0, 20, 0, 250)
+    verKey.BackgroundColor3 = Color3.fromRGB(50, 80, 130)
+    verKey.Text = "🔑 VER KEY"
+    verKey.TextColor3 = Color3.fromRGB(255, 255, 255)
+    verKey.Font = Enum.Font.GothamBold
+    verKey.TextSize = 13
+    verKey.Parent = frame
+    Instance.new("UICorner", verKey).CornerRadius = UDim.new(0, 8)
+
+    local missoes = Instance.new("TextButton")
+    missoes.Size = UDim2.new(1, -40, 0, 45)
+    missoes.Position = UDim2.new(0, 20, 0, 305)
+    missoes.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
+    missoes.Text = "🎯 FAZER MISSÕES"
+    missoes.TextColor3 = Color3.fromRGB(255, 255, 255)
+    missoes.Font = Enum.Font.GothamBold
+    missoes.TextSize = 13
+    missoes.Parent = frame
+    Instance.new("UICorner", missoes).CornerRadius = UDim.new(0, 8)
+
+    local validado = false
+
+    validar.MouseButton1Click:Connect(function()
+        if input.Text:upper() == keyAtual then
+            status.Text = "✅ Key válida!"
+            status.TextColor3 = Color3.fromRGB(100, 255, 100)
+            validado = true
+            task.wait(0.5)
+            loginGui:Destroy()
+        else
+            status.Text = "❌ Key inválida!"
+            status.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
+    end)
+
+    verKey.MouseButton1Click:Connect(function()
+        BG._abrirJanelaMostrarKey(keyAtual)
+    end)
+
+    missoes.MouseButton1Click:Connect(function()
+        BG._abrirJanelaMissoes(keyAtual)
+    end)
+
+    while not validado do task.wait(0.1) end
+end
+
+notifySucesso("BL5CK GUI carregada!")
+print("[GUI] Modulo carregado")
 
 notifySucesso("BL5CK GUI carregada!")
 print("[GUI] Modulo carregado")
