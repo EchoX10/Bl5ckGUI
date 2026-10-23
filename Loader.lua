@@ -1,5 +1,5 @@
 -- =========================================================
--- BLACKGUI LOADER (v4 - UserModules com tracking automático)
+-- BLACKGUI LOADER
 -- Repo: EchoX10/Bl5ckGUI
 -- =========================================================
 
@@ -517,8 +517,152 @@ local function carregarUserModule(caminho)
 end
 
 -- =========================================================
+-- VERIFICAR ATUALIZAÇÕES ANTES DO LOADING
+-- =========================================================
+local function verificarAtualizacoes()
+    local desatualizados = {}
+    local temInternet = true
+
+    for _, arquivo in ipairs(MODULOS) do
+        local caminhoLocal = PASTA_MODS .. "/" .. arquivo
+        if arqExiste(caminhoLocal) then
+            local localSrc = lerArquivo(caminhoLocal) or ""
+            local url = BASE_URL .. arquivo
+            local ok, remotoSrc = pcall(game.HttpGet, game, url, true)
+
+            if not ok or not remotoSrc or #remotoSrc < 50 then
+                temInternet = false
+            else
+                if localSrc ~= remotoSrc then
+                    table.insert(desatualizados, {
+                        nome = arquivo,
+                        url = url,
+                        caminhoLocal = caminhoLocal,
+                        novoConteudo = remotoSrc,
+                    })
+                end
+            end
+        end
+    end
+
+    return desatualizados, temInternet
+end
+
+-- janela de atualização
+local function abrirJanelaAtualizacao(desatualizados, callback)
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "BG_Atualizacao"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.DisplayOrder = 10000000
+    gui.Parent = CoreGui
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 400, 0, 280)
+    frame.Position = UDim2.new(0.5, -200, 0.5, -140)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BorderSizePixel = 0
+    frame.Active = true
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(40, 180, 70)
+    stroke.Thickness = 2
+    stroke.Parent = frame
+
+    local tit = Instance.new("TextLabel")
+    tit.Size = UDim2.new(1, 0, 0, 45)
+    tit.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+    tit.Text = "🔄 Atualização disponível"
+    tit.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tit.Font = Enum.Font.GothamBold
+    tit.TextSize = 15
+    tit.Parent = frame
+    Instance.new("UICorner", tit).CornerRadius = UDim.new(0, 12)
+
+    local listaTxt = Instance.new("TextLabel")
+    listaTxt.Size = UDim2.new(1, -40, 0, 100)
+    listaTxt.Position = UDim2.new(0, 20, 0, 55)
+    listaTxt.BackgroundTransparency = 1
+    listaTxt.Text = #desatualizados .. " módulo(s) mudou(aram):\n\n"
+    for i, d in ipairs(desatualizados) do
+        if i <= 5 then
+            listaTxt.Text = listaTxt.Text .. "• " .. d.nome .. "\n"
+        end
+    end
+    if #desatualizados > 5 then
+        listaTxt.Text = listaTxt.Text .. "... e mais " .. (#desatualizados - 5) .. "\n"
+    end
+    listaTxt.TextColor3 = Color3.fromRGB(200, 200, 200)
+    listaTxt.Font = Enum.Font.Gotham
+    listaTxt.TextSize = 12
+    listaTxt.TextXAlignment = Enum.TextXAlignment.Left
+    listaTxt.TextYAlignment = Enum.TextYAlignment.Top
+    listaTxt.TextWrapped = true
+    listaTxt.Parent = frame
+
+    local btnSim = Instance.new("TextButton")
+    btnSim.Size = UDim2.new(1, -40, 0, 45)
+    btnSim.Position = UDim2.new(0, 20, 0, 175)
+    btnSim.BackgroundColor3 = Color3.fromRGB(20, 60, 30)
+    btnSim.Text = "✅ SIM, ATUALIZAR"
+    btnSim.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnSim.Font = Enum.Font.GothamBold
+    btnSim.TextSize = 13
+    btnSim.Parent = frame
+    Instance.new("UICorner", btnSim).CornerRadius = UDim.new(0, 8)
+
+    local btnNao = Instance.new("TextButton")
+    btnNao.Size = UDim2.new(1, -40, 0, 45)
+    btnNao.Position = UDim2.new(0, 20, 0, 228)
+    btnNao.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+    btnNao.Text = "❌ NÃO, USAR LOCAL"
+    btnNao.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnNao.Font = Enum.Font.GothamBold
+    btnNao.TextSize = 13
+    btnNao.Parent = frame
+    Instance.new("UICorner", btnNao).CornerRadius = UDim.new(0, 8)
+
+    btnSim.MouseButton1Click:Connect(function()
+        gui:Destroy()
+        callback(true)
+    end)
+
+    btnNao.MouseButton1Click:Connect(function()
+        gui:Destroy()
+        callback(false)
+    end)
+end
+
+-- =========================================================
+-- ESPERA A RESPOSTA DA JANELA ANTES DE COMEÇAR O LOADING
+-- =========================================================
+do
+    local desatualizados, temInternet = verificarAtualizacoes()
+
+    if temInternet and #desatualizados > 0 then
+        local resultado = nil
+        abrirJanelaAtualizacao(desatualizados, function(sim)
+            resultado = sim
+        end)
+
+        while resultado == nil do
+            task.wait(0.1)
+        end
+
+        if resultado then
+            for _, d in ipairs(desatualizados) do
+                escreverArquivo(d.caminhoLocal, d.novoConteudo)
+            end
+        end
+    end
+end
+
+-- =========================================================
 -- PROCESSO PRINCIPAL
 -- =========================================================
+
 carregandoTask = task.spawn(function()
     local ok, err = pcall(function()
         -- ETAPA 1: criar pastas
