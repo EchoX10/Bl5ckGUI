@@ -410,7 +410,7 @@ function BG.toggleSkyTroll(ativar)
         pcall(function()
             seBTP:InvokeServer("CreateMeshes", {{Part = part}})
         end)
-        task.wait(0.15)
+        task.wait(0.01)
 
         pcall(function()
             seBTP:InvokeServer("SyncMesh", {{
@@ -420,7 +420,7 @@ function BG.toggleSkyTroll(ativar)
                 Scale = Vector3.new(-1500, -1500, -1500)
             }})
         end)
-        task.wait(0.1)
+        task.wait(0.01)
 
         for _, face in ipairs(SKY_TROLL_FACES) do
             pcall(function()
@@ -430,9 +430,9 @@ function BG.toggleSkyTroll(ativar)
                     TextureType = "Decal"
                 }})
             end)
-            task.wait(0.03)
+            task.wait(0.01)
         end
-        task.wait(0.2)
+        task.wait(0.01)
 
         for _, face in ipairs(SKY_TROLL_FACES) do
             pcall(function()
@@ -443,7 +443,7 @@ function BG.toggleSkyTroll(ativar)
                     Texture = SKY_TROLL_FRAMES[1]
                 }})
             end)
-            task.wait(0.03)
+            task.wait(0.01)
         end
 
         skyTrollTask = task.spawn(function()
@@ -466,7 +466,7 @@ function BG.toggleSkyTroll(ativar)
                     task.wait(0.01)
                 end
 
-                task.wait(0.05)
+                task.wait(0.01)
             end
         end)
 
