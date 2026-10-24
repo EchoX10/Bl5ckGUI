@@ -369,6 +369,7 @@ end
 local skyTrollAtivo = false
 local skyTrollPart = nil
 local skyTrollTask = nil
+local skyTrollWatchdog = nil
 
 local SKY_TROLL_FRAMES = {
     "rbxassetid://124885820999539",
@@ -458,14 +459,14 @@ function BG.toggleSkyTroll(ativar)
                             Texture = id
                         }})
                     end)
-                 end
+                end
+                task.wait(0.05)
             end
         end)
 
-        -- loop de watchdog: se o loop principal morrer sem o toggle desligar,
-        -- reinicia ele
-        task.spawn(function()
+        skyTrollWatchdog = task.spawn(function()
             while skyTrollAtivo do
+                task.wait(1)
                 if skyTrollAtivo and skyTrollPart and skyTrollPart.Parent then
                     if not skyTrollTask or coroutine.status(skyTrollTask) == "dead" then
                         skyTrollTask = task.spawn(function()
@@ -484,6 +485,7 @@ function BG.toggleSkyTroll(ativar)
                                         }})
                                     end)
                                 end
+                                task.wait(0.05)
                             end
                         end)
                     end
@@ -499,6 +501,10 @@ function BG.toggleSkyTroll(ativar)
         if skyTrollTask then
             pcall(function() task.cancel(skyTrollTask) end)
             skyTrollTask = nil
+        end
+        if skyTrollWatchdog then
+            pcall(function() task.cancel(skyTrollWatchdog) end)
+            skyTrollWatchdog = nil
         end
 
         if skyTrollPart and skyTrollPart.Parent then
