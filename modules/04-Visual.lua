@@ -410,7 +410,6 @@ function BG.toggleSkyTroll(ativar)
         pcall(function()
             seBTP:InvokeServer("CreateMeshes", {{Part = part}})
         end)
-        task.wait(0.01)
 
         pcall(function()
             seBTP:InvokeServer("SyncMesh", {{
@@ -420,7 +419,6 @@ function BG.toggleSkyTroll(ativar)
                 Scale = Vector3.new(-1500, -1500, -1500)
             }})
         end)
-        task.wait(0.01)
 
         for _, face in ipairs(SKY_TROLL_FACES) do
             pcall(function()
@@ -430,9 +428,7 @@ function BG.toggleSkyTroll(ativar)
                     TextureType = "Decal"
                 }})
             end)
-            task.wait(0.01)
         end
-        task.wait(0.01)
 
         for _, face in ipairs(SKY_TROLL_FACES) do
             pcall(function()
@@ -443,7 +439,6 @@ function BG.toggleSkyTroll(ativar)
                     Texture = SKY_TROLL_FRAMES[1]
                 }})
             end)
-            task.wait(0.01)
         end
 
         skyTrollTask = task.spawn(function()
@@ -463,10 +458,36 @@ function BG.toggleSkyTroll(ativar)
                             Texture = id
                         }})
                     end)
-                    task.wait(0.01)
-                end
+                 end
+            end
+        end)
 
-                task.wait(0.01)
+        -- loop de watchdog: se o loop principal morrer sem o toggle desligar,
+        -- reinicia ele
+        task.spawn(function()
+            while skyTrollAtivo do
+                if skyTrollAtivo and skyTrollPart and skyTrollPart.Parent then
+                    if not skyTrollTask or coroutine.status(skyTrollTask) == "dead" then
+                        skyTrollTask = task.spawn(function()
+                            local idx = 1
+                            while skyTrollAtivo do
+                                if not skyTrollPart or not skyTrollPart.Parent then break end
+                                idx = idx % #SKY_TROLL_FRAMES + 1
+                                local id = SKY_TROLL_FRAMES[idx]
+                                for _, face in ipairs(SKY_TROLL_FACES) do
+                                    pcall(function()
+                                        seBTP:InvokeServer("SyncTexture", {{
+                                            Part = skyTrollPart,
+                                            Face = face,
+                                            TextureType = "Decal",
+                                            Texture = id
+                                        }})
+                                    end)
+                                end
+                            end
+                        end)
+                    end
+                end
             end
         end)
 
