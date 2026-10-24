@@ -365,7 +365,7 @@ function BG.trocarPreset()
     notifyInfo("Preset: " .. currentName)
 end
 
--- ============== SKYBOX TROLL (FileMesh + TextureId trocando) ==============
+-- TROLL SKYBOX
 local skyTrollAtivo = false
 local skyTrollPart = nil
 local skyTrollTask = nil
@@ -377,7 +377,14 @@ local SKY_TROLL_FRAMES = {
     "rbxassetid://86947772484767",
 }
 
-local SKY_TROLL_FACES = {"Front", "Back", "Left", "Right", "Top", "Bottom"}
+local SKY_TROLL_FACES = {
+    Enum.NormalId.Front,
+    Enum.NormalId.Back,
+    Enum.NormalId.Left,
+    Enum.NormalId.Right,
+    Enum.NormalId.Top,
+    Enum.NormalId.Bottom,
+}
 
 function BG.toggleSkyTroll(ativar)
     if ativar then
@@ -401,7 +408,7 @@ function BG.toggleSkyTroll(ativar)
         F3X:Anchor(part)
         skyTrollPart = part
 
-        -- 2) CreateMeshes (mantido, sem TextureId)
+        -- 2) CreateMeshes
         pcall(function()
             seBTP:InvokeServer("CreateMeshes", {{Part = part}})
         end)
