@@ -435,31 +435,25 @@ function BG.toggleSkyTroll(ativar)
         end)
 
         skyTrollWatchdog = task.spawn(function()
-            while skyTrollAtivo do
-                task.wait(1)
-                if skyTrollAtivo and skyTrollPart and skyTrollPart.Parent then
-                    if not skyTrollTask or coroutine.status(skyTrollTask) == "dead" then
-                        skyTrollTask = task.spawn(function()
-                            local idx = 1
-                            while skyTrollAtivo do
-                                if not skyTrollPart or not skyTrollPart.Parent then break end
-                                idx = idx % #SKY_TROLL_FRAMES + 1
-                                local id = SKY_TROLL_FRAMES[idx]
-                                pcall(function()
-                                    seBTP:InvokeServer("SyncMesh", {{
-                                        Part = skyTrollPart,
-                                        MeshId = "",
-                                        TextureId = id,
-                                        Scale = Vector3.new(-1500, -1500, -1500)
-                                    }})
-                                end)
-                                task.wait(0.05)
-                            end
-                        end)
-                    end
-                end
-            end
-        end)
+   while skyTrollAtivo do
+        task.wait(2)
+        if not skyTrollAtivo then break end
+
+        -- pega o endpoint de novo (pode ter mudado após respawn)
+        local seBTP2 = getFork3XEndpoint()
+        if seBTP2 then seBTP = seBTP2 end
+
+        -- pede btools se não tiver
+        local backpack = plr:FindFirstChild("Backpack")
+        local char = plr.Character
+        local temBTP = (backpack and backpack:FindFirstChild("Building Tools")) or
+                       (char and char:FindFirstChild("Building Tools"))
+
+        if not temBTP then
+            cmdHD(";btools")
+        end
+    end
+end)
 
         notifySucesso("SkyBox troll ativo!")
     else
