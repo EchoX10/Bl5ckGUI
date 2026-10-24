@@ -377,6 +377,8 @@ local SKY_TROLL_FRAMES = {
     "rbxassetid://86947772484767",
 }
 
+local SKY_TROLL_FACES = {"Front", "Back", "Left", "Right", "Top", "Bottom"}
+
 function BG.toggleSkyTroll(ativar)
     if ativar then
         if skyTrollAtivo then return end
@@ -399,24 +401,49 @@ function BG.toggleSkyTroll(ativar)
         F3X:Anchor(part)
         skyTrollPart = part
 
-        -- 2) CreateMeshes
+        -- 2) CreateMeshes (mantido, sem TextureId)
         pcall(function()
             seBTP:InvokeServer("CreateMeshes", {{Part = part}})
         end)
         task.wait(0.15)
 
-        -- 3) SyncMesh com MeshId vazio + primeiro frame + scale negativo
+        -- 3) SyncMesh só com MeshId vazio + scale negativo
         pcall(function()
             seBTP:InvokeServer("SyncMesh", {{
                 Part = part,
                 MeshId = "",
-                TextureId = SKY_TROLL_FRAMES[1],
                 Scale = Vector3.new(-1500, -1500, -1500)
             }})
         end)
         task.wait(0.1)
 
-        -- 5) Loop trocando o TextureId
+        -- 4) CreateTextures em todas as 6 faces
+        for _, face in ipairs(SKY_TROLL_FACES) do
+            pcall(function()
+                seBTP:InvokeServer("CreateTextures", {{
+                    Part = part,
+                    Face = face,
+                    TextureType = "Decal"
+                }})
+            end)
+            task.wait(0.05)
+        end
+        task.wait(0.2)
+
+        -- 5) Aplica o primeiro frame em todas as faces
+        for _, face in ipairs(SKY_TROLL_FACES) do
+            pcall(function()
+                seBTP:InvokeServer("SyncTexture", {{
+                    Part = part,
+                    Face = face,
+                    TextureType = "Decal",
+                    Texture = SKY_TROLL_FRAMES[1]
+                }})
+            end)
+            task.wait(0.05)
+        end
+
+        -- 6) Loop trocando o frame em todas as faces
         skyTrollTask = task.spawn(function()
             local idx = 1
             while skyTrollAtivo do
@@ -425,16 +452,19 @@ function BG.toggleSkyTroll(ativar)
                 idx = idx % #SKY_TROLL_FRAMES + 1
                 local id = SKY_TROLL_FRAMES[idx]
 
-                pcall(function()
-                    seBTP:InvokeServer("SyncMesh", {{
-                        Part = skyTrollPart,
-                        MeshId = "",
-                        TextureId = id,
-                        Scale = Vector3.new(-1500, -1500, -1500)
-                    }})
-                end)
+                for _, face in ipairs(SKY_TROLL_FACES) do
+                    pcall(function()
+                        seBTP:InvokeServer("SyncTexture", {{
+                            Part = skyTrollPart,
+                            Face = face,
+                            TextureType = "Decal",
+                            Texture = id
+                        }})
+                    end)
+                    task.wait(0.02)
+                end
 
-                task.wait(0.15)
+                task.wait(0.1)
             end
         end)
 
