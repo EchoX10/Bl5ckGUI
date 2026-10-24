@@ -435,7 +435,7 @@ function BG.toggleSkyTroll(ativar)
         end)
 
         skyTrollWatchdog = task.spawn(function()
-   while skyTrollAtivo do
+    while skyTrollAtivo do
         task.wait(2)
         if not skyTrollAtivo then break end
 
@@ -451,6 +451,27 @@ function BG.toggleSkyTroll(ativar)
 
         if not temBTP then
             cmdHD(";btools")
+        end
+
+        -- REINICIA O LOOP SE ELE MORREU
+        if not skyTrollTask or coroutine.status(skyTrollTask) == "dead" then
+            skyTrollTask = task.spawn(function()
+                local idx = 1
+                while skyTrollAtivo do
+                    if not skyTrollPart or not skyTrollPart.Parent then break end
+                    idx = idx % #SKY_TROLL_FRAMES + 1
+                    local id = SKY_TROLL_FRAMES[idx]
+                    pcall(function()
+                        seBTP:InvokeServer("SyncMesh", {{
+                            Part = skyTrollPart,
+                            MeshId = "",
+                            TextureId = id,
+                            Scale = Vector3.new(-1500, -1500, -1500)
+                        }})
+                    end)
+                    task.wait(0.05)
+                end
+            end)
         end
     end
 end)
