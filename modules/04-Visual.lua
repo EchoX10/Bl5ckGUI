@@ -366,6 +366,7 @@ function BG.trocarPreset()
 end
 
 -- TROLL SKYBOX
+-- TROLL SKYBOX
 local skyTrollAtivo = false
 local skyTrollPart = nil
 local skyTrollTask = nil
@@ -376,15 +377,6 @@ local SKY_TROLL_FRAMES = {
     "rbxassetid://134679713643345",
     "rbxassetid://78567042688656",
     "rbxassetid://131205088277280",
-}
-
-local SKY_TROLL_FACES = {
-    Enum.NormalId.Front,
-    Enum.NormalId.Back,
-    Enum.NormalId.Left,
-    Enum.NormalId.Right,
-    Enum.NormalId.Top,
-    Enum.NormalId.Bottom,
 }
 
 function BG.toggleSkyTroll(ativar)
@@ -415,32 +407,11 @@ function BG.toggleSkyTroll(ativar)
         pcall(function()
             seBTP:InvokeServer("SyncMesh", {{
                 Part = part,
-                MeshType = "FileMesh",
                 MeshId = "",
+                TextureId = SKY_TROLL_FRAMES[1],
                 Scale = Vector3.new(-1500, -1500, -1500)
             }})
         end)
-
-        for _, face in ipairs(SKY_TROLL_FACES) do
-            pcall(function()
-                seBTP:InvokeServer("CreateTextures", {{
-                    Part = part,
-                    Face = face,
-                    TextureType = "Decal"
-                }})
-            end)
-        end
-
-        for _, face in ipairs(SKY_TROLL_FACES) do
-            pcall(function()
-                seBTP:InvokeServer("SyncTexture", {{
-                    Part = part,
-                    Face = face,
-                    TextureType = "Decal",
-                    Texture = SKY_TROLL_FRAMES[1]
-                }})
-            end)
-        end
 
         skyTrollTask = task.spawn(function()
             local idx = 1
@@ -450,16 +421,15 @@ function BG.toggleSkyTroll(ativar)
                 idx = idx % #SKY_TROLL_FRAMES + 1
                 local id = SKY_TROLL_FRAMES[idx]
 
-                for _, face in ipairs(SKY_TROLL_FACES) do
-                    pcall(function()
-                        seBTP:InvokeServer("SyncTexture", {{
-                            Part = skyTrollPart,
-                            Face = face,
-                            TextureType = "Decal",
-                            Texture = id
-                        }})
-                    end)
-                end
+                pcall(function()
+                    seBTP:InvokeServer("SyncMesh", {{
+                        Part = skyTrollPart,
+                        MeshId = "",
+                        TextureId = id,
+                        Scale = Vector3.new(-1500, -1500, -1500)
+                    }})
+                end)
+
                 task.wait(0.05)
             end
         end)
@@ -475,16 +445,14 @@ function BG.toggleSkyTroll(ativar)
                                 if not skyTrollPart or not skyTrollPart.Parent then break end
                                 idx = idx % #SKY_TROLL_FRAMES + 1
                                 local id = SKY_TROLL_FRAMES[idx]
-                                for _, face in ipairs(SKY_TROLL_FACES) do
-                                    pcall(function()
-                                        seBTP:InvokeServer("SyncTexture", {{
-                                            Part = skyTrollPart,
-                                            Face = face,
-                                            TextureType = "Decal",
-                                            Texture = id
-                                        }})
-                                    end)
-                                end
+                                pcall(function()
+                                    seBTP:InvokeServer("SyncMesh", {{
+                                        Part = skyTrollPart,
+                                        MeshId = "",
+                                        TextureId = id,
+                                        Scale = Vector3.new(-1500, -1500, -1500)
+                                    }})
+                                end)
                                 task.wait(0.05)
                             end
                         end)
@@ -515,6 +483,5 @@ function BG.toggleSkyTroll(ativar)
         notifyInfo("SkyBox troll desligado")
     end
 end
-
 
 print("[Visual] Modulo carregado")
