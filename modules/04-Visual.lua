@@ -516,4 +516,5 @@ function BG.toggleSkyTroll(ativar)
     end
 end
 
+
 print("[Visual] Modulo carregado")
