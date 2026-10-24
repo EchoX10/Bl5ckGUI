@@ -371,10 +371,10 @@ local skyTrollPart = nil
 local skyTrollTask = nil
 
 local SKY_TROLL_FRAMES = {
-    "rbxassetid://121591621727620",
-    "rbxassetid://88689108671959",
-    "rbxassetid://88627893405665",
-    "rbxassetid://86947772484767",
+    "rbxassetid://124885820999539",
+    "rbxassetid://134679713643345",
+    "rbxassetid://78567042688656",
+    "rbxassetid://131205088277280",
 }
 
 local SKY_TROLL_FACES = {
@@ -395,7 +395,6 @@ function BG.toggleSkyTroll(ativar)
         skyTrollAtivo = true
         notifyInfo("Criando SkyBox troll...")
 
-        -- 1) Cria Part 0.001 no 0,0,0
         local part = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
         if not part then
             notifyErro("Falha ao criar part!")
@@ -408,13 +407,11 @@ function BG.toggleSkyTroll(ativar)
         F3X:Anchor(part)
         skyTrollPart = part
 
-        -- 2) CreateMeshes
         pcall(function()
             seBTP:InvokeServer("CreateMeshes", {{Part = part}})
         end)
         task.wait(0.15)
 
-        -- 3) SyncMesh só com MeshId vazio + scale negativo
         pcall(function()
             seBTP:InvokeServer("SyncMesh", {{
                 Part = part,
@@ -424,7 +421,6 @@ function BG.toggleSkyTroll(ativar)
         end)
         task.wait(0.1)
 
-        -- 4) CreateTextures em todas as 6 faces
         for _, face in ipairs(SKY_TROLL_FACES) do
             pcall(function()
                 seBTP:InvokeServer("CreateTextures", {{
@@ -437,7 +433,6 @@ function BG.toggleSkyTroll(ativar)
         end
         task.wait(0.2)
 
-        -- 5) Aplica o primeiro frame em todas as faces
         for _, face in ipairs(SKY_TROLL_FACES) do
             pcall(function()
                 seBTP:InvokeServer("SyncTexture", {{
@@ -450,7 +445,6 @@ function BG.toggleSkyTroll(ativar)
             task.wait(0.05)
         end
 
-        -- 6) Loop trocando o frame em todas as faces
         skyTrollTask = task.spawn(function()
             local idx = 1
             while skyTrollAtivo do
