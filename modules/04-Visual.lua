@@ -408,16 +408,15 @@ local SKY_TROLL_ANIMS = {
         },
         delay = 5,
         pingpong = false,
-
-        -- Animação 4: 2 frames
-{
-    frames = {
-        "rbxassetid://11660423541",
-        "rbxassetid://4616500111",
     },
-    delay = 0.15,
-    pingpong = false,
-},
+    -- Animação 4: 2 frames
+    {
+        frames = {
+            "rbxassetid://11660423541",
+            "rbxassetid://4616500111",
+        },
+        delay = 0.15,
+        pingpong = false,
     },
 }
 
