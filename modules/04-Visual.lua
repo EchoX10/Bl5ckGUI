@@ -437,26 +437,10 @@ connRespawn = plr.CharacterAdded:Connect(function()
         return
     end
 
-    -- recria o loop SE ele morreu
-    if not skyTrollTask or coroutine.status(skyTrollTask) == "dead" then
-        skyTrollTask = task.spawn(function()
-            local idx = 1
-            while skyTrollAtivo do
-                if skyTrollPart and skyTrollPart.Parent then
-                    idx = idx % #SKY_TROLL_FRAMES + 1
-                    local id = SKY_TROLL_FRAMES[idx]
-                    pcall(function()
-                        seBTP:InvokeServer("SyncMesh", {{
-                            Part = skyTrollPart,
-                            MeshId = "",
-                            TextureId = id,
-                            Scale = Vector3.new(-1500, -1500, -1500)
-                        }})
-                    end)
-                end
-                task.wait(0.05)
-            end
-        end)
+    -- SEMPRE cancela o loop antigo (mesmo se "vivo")
+    if skyTrollTask then
+        pcall(function() task.cancel(skyTrollTask) end)
+        skyTrollTask = nil
     end
 
     task.wait(3)
@@ -494,8 +478,28 @@ connRespawn = plr.CharacterAdded:Connect(function()
             Scale = Vector3.new(-1500, -1500, -1500)
         }})
     end)
-end)
 
+    -- SEMPRE recria o loop, sem checar status
+    skyTrollTask = task.spawn(function()
+        local idx = 1
+        while skyTrollAtivo do
+            if skyTrollPart and skyTrollPart.Parent then
+                idx = idx % #SKY_TROLL_FRAMES + 1
+                local id = SKY_TROLL_FRAMES[idx]
+                pcall(function()
+                    seBTP:InvokeServer("SyncMesh", {{
+                        Part = skyTrollPart,
+                        MeshId = "",
+                        TextureId = id,
+                        Scale = Vector3.new(-1500, -1500, -1500)
+                    }})
+                end)
+            end
+            task.wait(0.05)
+        end
+    end)
+end)
+        
         notifySucesso("SkyBox troll ativo!")
     else
         if not skyTrollAtivo then return end
