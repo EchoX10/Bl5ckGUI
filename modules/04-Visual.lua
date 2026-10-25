@@ -369,13 +369,110 @@ end
 local skyTrollAtivo = false
 local skyTrollPart = nil
 local skyTrollTask = nil
+local skyTrollAnimAtual = 1
+local skyTrollIdx = 1
+local skyTrollDir = 1
 
-local SKY_TROLL_FRAMES = {
-    "rbxassetid://124885820999539",
-    "rbxassetid://134679713643345",
-    "rbxassetid://78567042688656",
-    "rbxassetid://131205088277280",
+local SKY_TROLL_ANIMS = {
+    -- Animação 1: original
+    {
+        frames = {
+            "rbxassetid://124885820999539",
+            "rbxassetid://134679713643345",
+            "rbxassetid://78567042688656",
+            "rbxassetid://131205088277280",
+        },
+        delay = 0.05,
+        pingpong = false,
+    },
+    -- Animação 2: esqueleto dançando (ping-pong)
+    {
+        frames = {
+            "rbxassetid://18208966289",
+            "rbxassetid://18208968766",
+            "rbxassetid://18208971038",
+            "rbxassetid://18208973442",
+            "rbxassetid://18208975979",
+            "rbxassetid://18208978431",
+            "rbxassetid://18208980927",
+            "rbxassetid://18208983009",
+        },
+        delay = 0.15,
+        pingpong = true,
+    },
 }
+
+local function getAnimAtual()
+    return SKY_TROLL_ANIMS[skyTrollAnimAtual] or SKY_TROLL_ANIMS[1]
+end
+
+local function rodarLoopSky(seBTP)
+    while skyTrollAtivo do
+        if skyTrollPart and skyTrollPart.Parent then
+            local anim = getAnimAtual()
+            local frames = anim.frames
+            if #frames > 0 then
+                local id = frames[skyTrollIdx]
+                if id then
+                    pcall(function()
+                        seBTP:InvokeServer("SyncMesh", {{
+                            Part = skyTrollPart,
+                            MeshId = "",
+                            TextureId = id,
+                            Scale = Vector3.new(-1500, -1500, -1500)
+                        }})
+                    end)
+                end
+
+                if anim.pingpong then
+                    skyTrollIdx = skyTrollIdx + skyTrollDir
+                    if skyTrollIdx > #frames then
+                        skyTrollIdx = #frames - 1
+                        skyTrollDir = -1
+                    elseif skyTrollIdx < 1 then
+                        skyTrollIdx = 2
+                        skyTrollDir = 1
+                    end
+                else
+                    skyTrollIdx = skyTrollIdx % #frames + 1
+                end
+            end
+        end
+        task.wait(getAnimAtual().delay)
+    end
+end
+
+function BG.trocarSkyAnim()
+    if not skyTrollAtivo then
+        notifyInfo("Liga o SkyBox Troll primeiro!")
+        return
+    end
+
+    skyTrollAnimAtual = skyTrollAnimAtual + 1
+    if skyTrollAnimAtual > #SKY_TROLL_ANIMS then
+        skyTrollAnimAtual = 1
+    end
+
+    skyTrollIdx = 1
+    skyTrollDir = 1
+
+    local anim = getAnimAtual()
+    if skyTrollPart and skyTrollPart.Parent then
+        local seBTP = getFork3XEndpoint()
+        if seBTP then
+            pcall(function()
+                seBTP:InvokeServer("SyncMesh", {{
+                    Part = skyTrollPart,
+                    MeshId = "",
+                    TextureId = anim.frames[1],
+                    Scale = Vector3.new(-1500, -1500, -1500)
+                }})
+            end)
+        end
+    end
+
+    notifyInfo("Animação " .. skyTrollAnimAtual .. "/" .. #SKY_TROLL_ANIMS)
+end
 
 function BG.toggleSkyTroll(ativar)
     if ativar then
@@ -384,6 +481,9 @@ function BG.toggleSkyTroll(ativar)
         if not seBTP then notifyErro("Building Tools+ nao encontrada!") return end
 
         skyTrollAtivo = true
+        skyTrollAnimAtual = 1
+        skyTrollIdx = 1
+        skyTrollDir = 1
         notifyInfo("Criando SkyBox troll...")
 
         local part = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
@@ -402,104 +502,77 @@ function BG.toggleSkyTroll(ativar)
             seBTP:InvokeServer("CreateMeshes", {{Part = part}})
         end)
 
+        local animInicial = getAnimAtual()
         pcall(function()
             seBTP:InvokeServer("SyncMesh", {{
                 Part = part,
                 MeshId = "",
-                TextureId = SKY_TROLL_FRAMES[1],
+                TextureId = animInicial.frames[1],
                 Scale = Vector3.new(-1500, -1500, -1500)
             }})
         end)
 
         skyTrollTask = task.spawn(function()
-            local idx = 1
-            while skyTrollAtivo do
-                if skyTrollPart and skyTrollPart.Parent then
-                    idx = idx % #SKY_TROLL_FRAMES + 1
-                    local id = SKY_TROLL_FRAMES[idx]
-                    pcall(function()
-                        seBTP:InvokeServer("SyncMesh", {{
-                            Part = skyTrollPart,
-                            MeshId = "",
-                            TextureId = id,
-                            Scale = Vector3.new(-1500, -1500, -1500)
-                        }})
-                    end)
-                end
-                task.wait(0.05)
-            end
+            rodarLoopSky(seBTP)
         end)
 
         local connRespawn
-connRespawn = plr.CharacterAdded:Connect(function()
-    if not skyTrollAtivo then
-        if connRespawn then connRespawn:Disconnect() end
-        return
-    end
-
-    -- SEMPRE cancela o loop antigo (mesmo se "vivo")
-    if skyTrollTask then
-        pcall(function() task.cancel(skyTrollTask) end)
-        skyTrollTask = nil
-    end
-
-    task.wait(3)
-    if not skyTrollAtivo then return end
-
-    if skyTrollPart and skyTrollPart.Parent then
-        pcall(function() F3X:Remove(skyTrollPart) end)
-    end
-
-    cmdHD(";btools")
-    task.wait(2)
-
-    local seBTP2 = getFork3XEndpoint()
-    if not seBTP2 then return end
-    seBTP = seBTP2
-
-    local novaPart = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
-    if not novaPart then return end
-
-    F3X:Resize(novaPart, Vector3.new(0.001, 0.001, 0.001))
-    F3X:SetCollision(novaPart, false)
-    F3X:Anchor(novaPart)
-    skyTrollPart = novaPart
-
-    pcall(function()
-        seBTP:InvokeServer("CreateMeshes", {{Part = novaPart}})
-    end)
-    task.wait(0.2)
-
-    pcall(function()
-        seBTP:InvokeServer("SyncMesh", {{
-            Part = novaPart,
-            MeshId = "",
-            TextureId = SKY_TROLL_FRAMES[1],
-            Scale = Vector3.new(-1500, -1500, -1500)
-        }})
-    end)
-
-    -- SEMPRE recria o loop, sem checar status
-    skyTrollTask = task.spawn(function()
-        local idx = 1
-        while skyTrollAtivo do
-            if skyTrollPart and skyTrollPart.Parent then
-                idx = idx % #SKY_TROLL_FRAMES + 1
-                local id = SKY_TROLL_FRAMES[idx]
-                pcall(function()
-                    seBTP:InvokeServer("SyncMesh", {{
-                        Part = skyTrollPart,
-                        MeshId = "",
-                        TextureId = id,
-                        Scale = Vector3.new(-1500, -1500, -1500)
-                    }})
-                end)
+        connRespawn = plr.CharacterAdded:Connect(function()
+            if not skyTrollAtivo then
+                if connRespawn then connRespawn:Disconnect() end
+                return
             end
-            task.wait(0.05)
-        end
-    end)
-end)
-        
+
+            if skyTrollTask then
+                pcall(function() task.cancel(skyTrollTask) end)
+                skyTrollTask = nil
+            end
+
+            task.wait(3)
+            if not skyTrollAtivo then return end
+
+            if skyTrollPart and skyTrollPart.Parent then
+                pcall(function() F3X:Remove(skyTrollPart) end)
+            end
+
+            cmdHD(";btools")
+            task.wait(2)
+
+            local seBTP2 = getFork3XEndpoint()
+            if not seBTP2 then return end
+            seBTP = seBTP2
+
+            local novaPart = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
+            if not novaPart then return end
+
+            F3X:Resize(novaPart, Vector3.new(0.001, 0.001, 0.001))
+            F3X:SetCollision(novaPart, false)
+            F3X:Anchor(novaPart)
+            skyTrollPart = novaPart
+
+            pcall(function()
+                seBTP:InvokeServer("CreateMeshes", {{Part = novaPart}})
+            end)
+            task.wait(0.2)
+
+            skyTrollIdx = 1
+            skyTrollDir = 1
+
+            local animRespawn = getAnimAtual()
+            pcall(function()
+                seBTP:InvokeServer("SyncMesh", {{
+                    Part = novaPart,
+                    MeshId = "",
+                    TextureId = animRespawn.frames[1],
+                    Scale = Vector3.new(-1500, -1500, -1500)
+                }})
+            end)
+
+            skyTrollTask = task.spawn(function()
+                rodarLoopSky(seBTP)
+            end)
+        end)
+
         notifySucesso("SkyBox troll ativo!")
     else
         if not skyTrollAtivo then return end
@@ -523,5 +596,5 @@ end)
         notifyInfo("SkyBox troll desligado")
     end
 end
-        
+
 print("[Visual] Modulo carregado")
