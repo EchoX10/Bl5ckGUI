@@ -420,66 +420,48 @@ local function rodarLoopSky(seBTP)
             local anim = getAnimAtual()
             local frames = anim.frames
             if #frames > 0 then
-                local id = frames[skyTrollIdx]
-                if id then
+                if #frames == 1 then
                     pcall(function()
                         seBTP:InvokeServer("SyncMesh", {{
                             Part = skyTrollPart,
                             MeshId = "",
-                            TextureId = id,
+                            TextureId = frames[1],
                             Scale = Vector3.new(-1500, -1500, -1500)
                         }})
                     end)
-                end
-
-                if anim.pingpong then
-                    skyTrollIdx = skyTrollIdx + skyTrollDir
-                    if skyTrollIdx > #frames then
-                        skyTrollIdx = #frames - 1
-                        skyTrollDir = -1
-                    elseif skyTrollIdx < 1 then
-                        skyTrollIdx = 2
-                        skyTrollDir = 1
-                    end
+                    task.wait(anim.delay)
                 else
-                    skyTrollIdx = skyTrollIdx % #frames + 1
+                    local id = frames[skyTrollIdx]
+                    if id then
+                        pcall(function()
+                            seBTP:InvokeServer("SyncMesh", {{
+                                Part = skyTrollPart,
+                                MeshId = "",
+                                TextureId = id,
+                                Scale = Vector3.new(-1500, -1500, -1500)
+                            }})
+                        end)
+                    end
+
+                    if anim.pingpong then
+                        skyTrollIdx = skyTrollIdx + skyTrollDir
+                        if skyTrollIdx > #frames then
+                            skyTrollIdx = #frames - 1
+                            skyTrollDir = -1
+                        elseif skyTrollIdx < 1 then
+                            skyTrollIdx = 2
+                            skyTrollDir = 1
+                        end
+                    else
+                        skyTrollIdx = skyTrollIdx % #frames + 1
+                    end
+                    task.wait(anim.delay)
                 end
             end
-        end
-        task.wait(getAnimAtual().delay)
-    end
-end
-
-function BG.trocarSkyAnim()
-    if not skyTrollAtivo then
-        notifyInfo("Liga o SkyBox Troll primeiro!")
-        return
-    end
-
-    skyTrollAnimAtual = skyTrollAnimAtual + 1
-    if skyTrollAnimAtual > #SKY_TROLL_ANIMS then
-        skyTrollAnimAtual = 1
-    end
-
-    skyTrollIdx = 1
-    skyTrollDir = 1
-
-    local anim = getAnimAtual()
-    if skyTrollPart and skyTrollPart.Parent then
-        local seBTP = getFork3XEndpoint()
-        if seBTP then
-            pcall(function()
-                seBTP:InvokeServer("SyncMesh", {{
-                    Part = skyTrollPart,
-                    MeshId = "",
-                    TextureId = anim.frames[1],
-                    Scale = Vector3.new(-1500, -1500, -1500)
-                }})
-            end)
+        else
+            task.wait(0.5)
         end
     end
-
-    notifyInfo("Animação " .. skyTrollAnimAtual .. "/" .. #SKY_TROLL_ANIMS)
 end
 
 function BG.toggleSkyTroll(ativar)
