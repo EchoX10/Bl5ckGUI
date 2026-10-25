@@ -464,6 +464,38 @@ local function rodarLoopSky(seBTP)
     end
 end
 
+function BG.trocarSkyAnim()
+    if not skyTrollAtivo then
+        notifyInfo("Liga o SkyBox Troll primeiro!")
+        return
+    end
+
+    skyTrollAnimAtual = skyTrollAnimAtual + 1
+    if skyTrollAnimAtual > #SKY_TROLL_ANIMS then
+        skyTrollAnimAtual = 1
+    end
+
+    skyTrollIdx = 1
+    skyTrollDir = 1
+
+    local anim = getAnimAtual()
+    if skyTrollPart and skyTrollPart.Parent then
+        local seBTP = getFork3XEndpoint()
+        if seBTP then
+            pcall(function()
+                seBTP:InvokeServer("SyncMesh", {{
+                    Part = skyTrollPart,
+                    MeshId = "",
+                    TextureId = anim.frames[1],
+                    Scale = Vector3.new(-1500, -1500, -1500)
+                }})
+            end)
+        end
+    end
+
+    notifyInfo("Animação " .. skyTrollAnimAtual .. "/" .. #SKY_TROLL_ANIMS)
+end
+
 function BG.toggleSkyTroll(ativar)
     if ativar then
         if skyTrollAtivo then return end
