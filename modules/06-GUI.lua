@@ -309,6 +309,7 @@ criarToggle("Partículas", function(e)
     if e then BG.ligarParticulas() else BG.desligarParticulas() end
 end, tab2)
 criarToggle("SkyBox Troll", function(e) BG.toggleSkyTroll(e) end, tab2)
+criarBotao("Trocar Anim SkyBox", BG.trocarSkyAnim, tab2)
 criarBotao("Skybox", BG.botaoMeshGlitch, tab2)
 criarBotao("Texturizar Mapa", BG.botaoTexturizarTudo, tab2)
 criarBotao("Colorir Mapa Todo", BG.botaoColorirMapa, tab2)
