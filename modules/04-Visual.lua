@@ -411,101 +411,61 @@ function BG.toggleSkyTroll(ativar)
             }})
         end)
 
-skyTrollTask = task.spawn(function()
-    local idx = 1
-    local ultimoFrameAplicado = nil
-    while skyTrollAtivo do
-        if not skyTrollPart or not skyTrollPart.Parent then break end
-
-        idx = idx % #SKY_TROLL_FRAMES + 1
-        local id = SKY_TROLL_FRAMES[idx]
-
-        local ok = pcall(function()
-            seBTP:InvokeServer("SyncMesh", {{
-                Part = skyTrollPart,
-                MeshId = "",
-                TextureId = id,
-                Scale = Vector3.new(-1500, -1500, -1500)
-            }})
+                -- loop principal
+        skyTrollTask = task.spawn(function()
+            local idx = 1
+            while skyTrollAtivo do
+                if not skyTrollPart or not skyTrollPart.Parent then break end
+                idx = idx % #SKY_TROLL_FRAMES + 1
+                local id = SKY_TROLL_FRAMES[idx]
+                pcall(function()
+                    seBTP:InvokeServer("SyncMesh", {{
+                        Part = skyTrollPart,
+                        MeshId = "",
+                        TextureId = id,
+                        Scale = Vector3.new(-1500, -1500, -1500)
+                    }})
+                end)
+                task.wait(0.05)
+            end
         end)
 
-        if not ok then
-            -- BTP perdeu conexão: pede de novo, espera, recria Part
+        -- respawn recria Part
+        local connRespawn
+        connRespawn = plr.CharacterAdded:Connect(function()
+            if not skyTrollAtivo then
+                if connRespawn then connRespawn:Disconnect() end
+                return
+            end
+            task.wait(3)
+            if not skyTrollAtivo then return end
+            if skyTrollPart and skyTrollPart.Parent then
+                pcall(function() F3X:Remove(skyTrollPart) end)
+            end
             cmdHD(";btools")
             task.wait(2)
-
-            local backpack = plr:FindFirstChild("Backpack")
-            if backpack and backpack:FindFirstChild("Building Tools") then
-                local novoBTP = getFork3XEndpoint()
-                if novoBTP then seBTP = novoBTP end
-
-                -- deleta Part antiga e cria nova (registra na sessão nova)
-                if skyTrollPart and skyTrollPart.Parent then
-                    pcall(function() F3X:Remove(skyTrollPart) end)
-                end
-
-                local novaPart = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
-                if novaPart then
-                    F3X:Resize(novaPart, Vector3.new(0.001, 0.001, 0.001))
-                    F3X:SetCollision(novaPart, false)
-                    F3X:Anchor(novaPart)
-                    skyTrollPart = novaPart
-
-                    pcall(function()
-                        seBTP:InvokeServer("CreateMeshes", {{Part = novaPart}})
-                    end)
-                    pcall(function()
-                        seBTP:InvokeServer("SyncMesh", {{
-                            Part = novaPart,
-                            MeshId = "",
-                            TextureId = id,
-                            Scale = Vector3.new(-1500, -1500, -1500)
-                        }})
-                    end)
-                end
-            end
-        end
-
-        ultimoFrameAplicado = id
-        task.wait(0.05)
-    end
-end)
-        
-        -- watchdog: reinicia o loop se ele morrer (respawn mata)
-task.spawn(function()
-    while skyTrollAtivo do
-        task.wait(1)
-        if not skyTrollAtivo then break end
-
-        if not skyTrollPart or not skyTrollPart.Parent then break end
-
-        if not skyTrollTask or coroutine.status(skyTrollTask) == "dead" then
-            skyTrollTask = task.spawn(function()
-                local idx = 1
-                while skyTrollAtivo do
-                    if not skyTrollPart or not skyTrollPart.Parent then break end
-
-                    local seBTPAtual = getFork3XEndpoint()
-                    if seBTPAtual then seBTP = seBTPAtual end
-
-                    idx = idx % #SKY_TROLL_FRAMES + 1
-                    local id = SKY_TROLL_FRAMES[idx]
-
-                    pcall(function()
-                        seBTP:InvokeServer("SyncMesh", {{
-                            Part = skyTrollPart,
-                            MeshId = "",
-                            TextureId = id,
-                            Scale = Vector3.new(-1500, -1500, -1500)
-                        }})
-                    end)
-
-                    task.wait(0.05)
-                end
+            local seBTP2 = getFork3XEndpoint()
+            if not seBTP2 then return end
+            seBTP = seBTP2
+            local novaPart = F3X:CreatePart("Normal", CFrame.new(0, 0, 0), workspace)
+            if not novaPart then return end
+            F3X:Resize(novaPart, Vector3.new(0.001, 0.001, 0.001))
+            F3X:SetCollision(novaPart, false)
+            F3X:Anchor(novaPart)
+            skyTrollPart = novaPart
+            pcall(function()
+                seBTP:InvokeServer("CreateMeshes", {{Part = novaPart}})
             end)
-        end
-    end
-end)
+            task.wait(0.2)
+            pcall(function()
+                seBTP:InvokeServer("SyncMesh", {{
+                    Part = novaPart,
+                    MeshId = "",
+                    TextureId = SKY_TROLL_FRAMES[1],
+                    Scale = Vector3.new(-1500, -1500, -1500)
+                }})
+            end)
+        end)
 
         notifySucesso("SkyBox troll ativo!")
     else
@@ -517,6 +477,11 @@ end)
             skyTrollTask = nil
         end
 
+        if connRespawn then
+            pcall(function() connRespawn:Disconnect() end)
+            connRespawn = nil
+        end
+
         if skyTrollPart and skyTrollPart.Parent then
             pcall(function() F3X:Remove(skyTrollPart) end)
         end
@@ -525,5 +490,5 @@ end)
         notifyInfo("SkyBox troll desligado")
     end
 end
-
+        
 print("[Visual] Modulo carregado")
