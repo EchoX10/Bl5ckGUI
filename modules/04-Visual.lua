@@ -413,12 +413,26 @@ function BG.toggleSkyTroll(ativar)
 
         skyTrollTask = task.spawn(function()
     local idx = 1
+    local contador = 0
     while skyTrollAtivo do
         if not skyTrollPart or not skyTrollPart.Parent then break end
 
-        -- atualiza o endpoint a cada frame (se mudou)
-        local seBTPAtual = getFork3XEndpoint()
-        if seBTPAtual then seBTP = seBTPAtual end
+        -- a cada 1s verifica se o BTP tá no backpack, se não, reequipa
+        contador = contador + 1
+        if contador % 20 == 0 then
+            local backpack = plr:FindFirstChild("Backpack")
+            local char = plr.Character
+            local temBTP = (backpack and backpack:FindFirstChild("Building Tools")) or
+                           (char and char:FindFirstChild("Building Tools"))
+
+            if not temBTP then
+                cmdHD(";btools")
+            else
+                -- BTP voltou, pega o endpoint novo
+                local novoBTP = getFork3XEndpoint()
+                if novoBTP then seBTP = novoBTP end
+            end
+        end
 
         idx = idx % #SKY_TROLL_FRAMES + 1
         local id = SKY_TROLL_FRAMES[idx]
@@ -435,7 +449,6 @@ function BG.toggleSkyTroll(ativar)
         task.wait(0.05)
     end
 end)
-
         -- watchdog: reinicia o loop se ele morrer (respawn mata)
 task.spawn(function()
     while skyTrollAtivo do
