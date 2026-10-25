@@ -400,6 +400,14 @@ local SKY_TROLL_ANIMS = {
         delay = 0.15,
         pingpong = true,
     },
+    -- Animação 3: imagem estática
+    {
+        frames = {
+            "rbxassetid://75393875196571",
+        },
+        delay = 5,
+        pingpong = false,
+    },
 }
 
 local function getAnimAtual()
