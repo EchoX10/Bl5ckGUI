@@ -262,6 +262,7 @@ end
 local MUSIC_PRESETS = {
     {id = 1839246711, vol = 9999, pitch = 0.9, nome = "Jumpsytle"},
     {id = 95156028272944, vol = 9999, pitch = 0.2, nome = "Padrao"},
+    {id = 3200130016, vol = 9999, pitch = 1, nome = "You Are An Idiot"},    
     {id = 16190761193, vol = 9999, pitch = 0.9, nome = "Jugsta"},
     {id = 85598267402579, vol = 9999, pitch = 0.9, nome = "Kit"},
     {id = 105828916140935, vol = 9999, pitch = 0.9, nome = "Her Boyfriend"},
@@ -407,6 +408,16 @@ local SKY_TROLL_ANIMS = {
         },
         delay = 5,
         pingpong = false,
+
+        -- Animação 4: 2 frames
+{
+    frames = {
+        "rbxassetid://11660423541",
+        "rbxassetid://4616500111",
+    },
+    delay = 0.15,
+    pingpong = false,
+},
     },
 }
 
