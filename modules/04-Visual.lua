@@ -411,26 +411,25 @@ function BG.toggleSkyTroll(ativar)
             }})
         end)
 
-                -- loop principal
         skyTrollTask = task.spawn(function()
             local idx = 1
             while skyTrollAtivo do
-                if not skyTrollPart or not skyTrollPart.Parent then break end
-                idx = idx % #SKY_TROLL_FRAMES + 1
-                local id = SKY_TROLL_FRAMES[idx]
-                pcall(function()
-                    seBTP:InvokeServer("SyncMesh", {{
-                        Part = skyTrollPart,
-                        MeshId = "",
-                        TextureId = id,
-                        Scale = Vector3.new(-1500, -1500, -1500)
-                    }})
-                end)
+                if skyTrollPart and skyTrollPart.Parent then
+                    idx = idx % #SKY_TROLL_FRAMES + 1
+                    local id = SKY_TROLL_FRAMES[idx]
+                    pcall(function()
+                        seBTP:InvokeServer("SyncMesh", {{
+                            Part = skyTrollPart,
+                            MeshId = "",
+                            TextureId = id,
+                            Scale = Vector3.new(-1500, -1500, -1500)
+                        }})
+                    end)
+                end
                 task.wait(0.05)
             end
         end)
 
-        -- respawn recria Part
         local connRespawn
         connRespawn = plr.CharacterAdded:Connect(function()
             if not skyTrollAtivo then
