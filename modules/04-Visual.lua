@@ -262,7 +262,8 @@ end
 local MUSIC_PRESETS = {
     {id = 1839246711, vol = 9999, pitch = 0.9, nome = "Jumpsytle"},
     {id = 95156028272944, vol = 9999, pitch = 0.2, nome = "Padrao"},
-    {id = 3200130016, vol = 9999, pitch = 1, nome = "You Are An Idiot"},    
+    {id = 106465557331772, vol = 0.04, pitch = 0.3, nome = "Obunga Incident"},
+    {id = 3200130016, vol = 9999, pitch = 1, nome = "You Are An Idiot"},
     {id = 16190761193, vol = 9999, pitch = 0.9, nome = "Jugsta"},
     {id = 85598267402579, vol = 9999, pitch = 0.9, nome = "Kit"},
     {id = 105828916140935, vol = 9999, pitch = 0.9, nome = "Her Boyfriend"},
@@ -418,6 +419,17 @@ local SKY_TROLL_ANIMS = {
         delay = 0.15,
         pingpong = false,
     },
+
+    -- Animação 5: Incidente do Obama
+{
+    frames = {
+        "rbxassetid://128337057481431",
+        "rbxassetid://122485354",
+        "rbxassetid://110101823944184",
+    },
+    delay = 0.3,
+    pingpong = false,
+},
 }
 
 local function getAnimAtual()
