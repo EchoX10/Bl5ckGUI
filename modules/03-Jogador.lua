@@ -1365,7 +1365,7 @@ local function criarPartJumpScare(player)
             Part = part,
             MeshId = "",
             TextureId = JUMP_SCARE_TEXTURE,
-            Scale = Vector3.new(10, 10, 10)
+            Scale = Vector3.new(-10, -10, -10)
         }})
     end)
 
