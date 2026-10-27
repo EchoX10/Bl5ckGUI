@@ -1331,9 +1331,11 @@ end
 -- ============== JUMP SCARE (part seguindo cada player) ==============
 local jumpScareAtivo = false
 local jumpScareParts = {}
+local jumpScareHRP = {}
 local jumpScareTask = nil
 local jumpScareConnAdded = nil
 local jumpScareConnRemoved = nil
+local jumpScareLocalConn = nil
 
 local JUMP_SCARE_TEXTURE = "rbxassetid://75393875196571"
 local JUMP_SCARE_SOUND = "93184334779935"
@@ -1370,6 +1372,7 @@ local function criarPartJumpScare(player)
     end)
 
     jumpScareParts[player.UserId] = part
+    jumpScareHRP[player.UserId] = hrp
 end
 
 local function removerPartJumpScare(player)
@@ -1378,6 +1381,7 @@ local function removerPartJumpScare(player)
         pcall(function() F3X:Remove(part) end)
     end
     jumpScareParts[player.UserId] = nil
+    jumpScareHRP[player.UserId] = nil
 end
 
 function BG.toggleJumpScare(ativar)
@@ -1389,6 +1393,7 @@ function BG.toggleJumpScare(ativar)
 
         jumpScareAtivo = true
         jumpScareParts = {}
+        jumpScareHRP = {}
 
         notifyInfo("Criando jump scare...")
 
@@ -1413,23 +1418,56 @@ function BG.toggleJumpScare(ativar)
             removerPartJumpScare(player)
         end)
 
+        -- quando o PLAYER LOCAL respawna, BTP reseta. Reequipa e recria tudo.
+        jumpScareLocalConn = plr.CharacterAdded:Connect(function()
+            if not jumpScareAtivo then return end
+            task.wait(2)
+            if not jumpScareAtivo then return end
+            cmdHD(";btools")
+            task.wait(2)
+            if not jumpScareAtivo then return end
+
+            -- limpa parts antigas (ficaram órfãs com o BTP antigo)
+            for userId, part in pairs(jumpScareParts) do
+                if part and part.Parent then
+                    pcall(function() F3X:Remove(part) end)
+                end
+            end
+            jumpScareParts = {}
+            jumpScareHRP = {}
+
+            -- recria pra todos
+            for _, player in ipairs(Players:GetPlayers()) do
+                criarPartJumpScare(player)
+            end
+        end)
+
         -- loop de atualização
         jumpScareTask = task.spawn(function()
             while jumpScareAtivo do
                 local seBTPAtual = getFork3XEndpoint()
-                local seBTPFinal = seBTPAtual or seBTP
+                if seBTPAtual then seBTP = seBTPAtual end
 
                 for _, player in ipairs(Players:GetPlayers()) do
+                    local char = player.Character
+                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    local hrpAnterior = jumpScareHRP[player.UserId]
                     local part = jumpScareParts[player.UserId]
-                    if part and part.Parent and player.Character then
-                        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                        if hrp then
-                            pcall(function()
-                                F3X:Move(part, hrp.CFrame)
-                            end)
+
+                    if hrp and hrp ~= hrpAnterior then
+                        -- HRP mudou (respawn) → remove antiga e cria nova
+                        if part and part.Parent then
+                            pcall(function() F3X:Remove(part) end)
                         end
-                    elseif player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        -- cria se ainda não tem (ex: respawn)
+                        jumpScareParts[player.UserId] = nil
+                        jumpScareHRP[player.UserId] = hrp
+                        criarPartJumpScare(player)
+                    elseif part and part.Parent and hrp then
+                        -- mesmo HRP, só move
+                        pcall(function() F3X:Move(part, hrp.CFrame) end)
+                    elseif hrp and (not part or not part.Parent) then
+                        -- part sumiu (foi deletada por algo), recria
+                        jumpScareHRP[player.UserId] = hrp
                         criarPartJumpScare(player)
                     end
                 end
@@ -1461,6 +1499,10 @@ function BG.toggleJumpScare(ativar)
             pcall(function() jumpScareConnRemoved:Disconnect() end)
             jumpScareConnRemoved = nil
         end
+        if jumpScareLocalConn then
+            pcall(function() jumpScareLocalConn:Disconnect() end)
+            jumpScareLocalConn = nil
+        end
 
         -- remove todas as parts
         for userId, part in pairs(jumpScareParts) do
@@ -1469,6 +1511,7 @@ function BG.toggleJumpScare(ativar)
             end
         end
         jumpScareParts = {}
+        jumpScareHRP = {}
 
         notifyInfo("Jump Scare desligado")
     end
