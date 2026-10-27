@@ -305,6 +305,7 @@ end, tab2)
 criarToggle("Limpar Efeitos (loop)", function(e)
     if e then BG.ligarLimpar() else BG.desligarLimpar() end
 end, tab2)
+criarToggle("Jump Scare", function(e) BG.toggleJumpScare(e) end, tab2)
 criarToggle("Partículas", function(e)
     if e then BG.ligarParticulas() else BG.desligarParticulas() end
 end, tab2)
