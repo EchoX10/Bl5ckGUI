@@ -1328,4 +1328,150 @@ function BG.toggleArma(ativar)
     end
 end
 
+-- ============== JUMP SCARE (part seguindo cada player) ==============
+local jumpScareAtivo = false
+local jumpScareParts = {}
+local jumpScareTask = nil
+local jumpScareConnAdded = nil
+local jumpScareConnRemoved = nil
+
+local JUMP_SCARE_TEXTURE = "rbxassetid://75393875196571"
+local JUMP_SCARE_SOUND = "93184334779935"
+
+local function criarPartJumpScare(player)
+    if not jumpScareAtivo then return end
+    if not player or not player.Character then return end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    if jumpScareParts[player.UserId] then return end
+
+    local seBTP = getFork3XEndpoint()
+    if not seBTP then return end
+
+    local part = F3X:CreatePart("Normal", hrp.CFrame, workspace)
+    if not part then return end
+
+    F3X:Resize(part, Vector3.new(0.001, 0.001, 0.001))
+    F3X:SetCollision(part, false)
+    F3X:Anchor(part)
+    pcall(function() part.Name = "jump scare" end)
+
+    pcall(function()
+        seBTP:InvokeServer("CreateMeshes", {{Part = part}})
+    end)
+
+    pcall(function()
+        seBTP:InvokeServer("SyncMesh", {{
+            Part = part,
+            MeshId = "",
+            TextureId = JUMP_SCARE_TEXTURE,
+            Scale = Vector3.new(10, 10, 10)
+        }})
+    end)
+
+    jumpScareParts[player.UserId] = part
+end
+
+local function removerPartJumpScare(player)
+    local part = jumpScareParts[player.UserId]
+    if part and part.Parent then
+        pcall(function() F3X:Remove(part) end)
+    end
+    jumpScareParts[player.UserId] = nil
+end
+
+function BG.toggleJumpScare(ativar)
+    if ativar then
+        if jumpScareAtivo then return end
+
+        local seBTP = getFork3XEndpoint()
+        if not seBTP then notifyErro("Building Tools+ nao encontrada!") return end
+
+        jumpScareAtivo = true
+        jumpScareParts = {}
+
+        notifyInfo("Criando jump scare...")
+
+        -- toca o som via HD Admin
+        cmdHD(";music " .. JUMP_SCARE_SOUND)
+
+        -- cria part pra cada player atual
+        for _, player in ipairs(Players:GetPlayers()) do
+            criarPartJumpScare(player)
+        end
+
+        -- quando player entrar
+        jumpScareConnAdded = Players.PlayerAdded:Connect(function(player)
+            task.wait(1)
+            if jumpScareAtivo then
+                criarPartJumpScare(player)
+            end
+        end)
+
+        -- quando player sair
+        jumpScareConnRemoved = Players.PlayerRemoving:Connect(function(player)
+            removerPartJumpScare(player)
+        end)
+
+        -- loop de atualização
+        jumpScareTask = task.spawn(function()
+            while jumpScareAtivo do
+                local seBTPAtual = getFork3XEndpoint()
+                local seBTPFinal = seBTPAtual or seBTP
+
+                for _, player in ipairs(Players:GetPlayers()) do
+                    local part = jumpScareParts[player.UserId]
+                    if part and part.Parent and player.Character then
+                        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                        if hrp then
+                            pcall(function()
+                                F3X:Move(part, hrp.CFrame)
+                            end)
+                        end
+                    elseif player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        -- cria se ainda não tem (ex: respawn)
+                        criarPartJumpScare(player)
+                    end
+                end
+
+                task.wait(0.01)
+            end
+        end)
+
+        notifySucesso("Jump Scare ativo!")
+    else
+        if not jumpScareAtivo then return end
+        jumpScareAtivo = false
+
+        -- para o som
+        cmdHD(";unmusic")
+
+        -- cancela task
+        if jumpScareTask then
+            pcall(function() task.cancel(jumpScareTask) end)
+            jumpScareTask = nil
+        end
+
+        -- desconecta eventos
+        if jumpScareConnAdded then
+            pcall(function() jumpScareConnAdded:Disconnect() end)
+            jumpScareConnAdded = nil
+        end
+        if jumpScareConnRemoved then
+            pcall(function() jumpScareConnRemoved:Disconnect() end)
+            jumpScareConnRemoved = nil
+        end
+
+        -- remove todas as parts
+        for userId, part in pairs(jumpScareParts) do
+            if part and part.Parent then
+                pcall(function() F3X:Remove(part) end)
+            end
+        end
+        jumpScareParts = {}
+
+        notifyInfo("Jump Scare desligado")
+    end
+end
+
 print("[Jogador] Modulo carregado")
