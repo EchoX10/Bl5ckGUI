@@ -1332,6 +1332,7 @@ end
 local jumpScareAtivo = false
 local jumpScareParts = {}
 local jumpScareHRP = {}
+local jumpScareLastCriacao = {}
 local jumpScareTask = nil
 local jumpScareConnAdded = nil
 local jumpScareConnRemoved = nil
@@ -1373,6 +1374,7 @@ local function criarPartJumpScare(player)
 
     jumpScareParts[player.UserId] = part
     jumpScareHRP[player.UserId] = hrp
+    jumpScareLastCriacao[player.UserId] = tick()
 end
 
 local function removerPartJumpScare(player)
@@ -1382,6 +1384,7 @@ local function removerPartJumpScare(player)
     end
     jumpScareParts[player.UserId] = nil
     jumpScareHRP[player.UserId] = nil
+    jumpScareLastCriacao[player.UserId] = nil
 end
 
 function BG.toggleJumpScare(ativar)
@@ -1394,18 +1397,16 @@ function BG.toggleJumpScare(ativar)
         jumpScareAtivo = true
         jumpScareParts = {}
         jumpScareHRP = {}
+        jumpScareLastCriacao = {}
 
         notifyInfo("Criando jump scare...")
 
-        -- toca o som via HD Admin
         cmdHD(";music " .. JUMP_SCARE_SOUND)
 
-        -- cria part pra cada player atual
         for _, player in ipairs(Players:GetPlayers()) do
             criarPartJumpScare(player)
         end
 
-        -- quando player entrar
         jumpScareConnAdded = Players.PlayerAdded:Connect(function(player)
             task.wait(1)
             if jumpScareAtivo then
@@ -1413,12 +1414,10 @@ function BG.toggleJumpScare(ativar)
             end
         end)
 
-        -- quando player sair
         jumpScareConnRemoved = Players.PlayerRemoving:Connect(function(player)
             removerPartJumpScare(player)
         end)
 
-        -- quando o PLAYER LOCAL respawna, BTP reseta. Reequipa e recria tudo.
         jumpScareLocalConn = plr.CharacterAdded:Connect(function()
             if not jumpScareAtivo then return end
             task.wait(2)
@@ -1427,7 +1426,6 @@ function BG.toggleJumpScare(ativar)
             task.wait(2)
             if not jumpScareAtivo then return end
 
-            -- limpa parts antigas (ficaram órfãs com o BTP antigo)
             for userId, part in pairs(jumpScareParts) do
                 if part and part.Parent then
                     pcall(function() F3X:Remove(part) end)
@@ -1435,14 +1433,13 @@ function BG.toggleJumpScare(ativar)
             end
             jumpScareParts = {}
             jumpScareHRP = {}
+            jumpScareLastCriacao = {}
 
-            -- recria pra todos
             for _, player in ipairs(Players:GetPlayers()) do
                 criarPartJumpScare(player)
             end
         end)
 
-        -- loop de atualização
         jumpScareTask = task.spawn(function()
             while jumpScareAtivo do
                 local seBTPAtual = getFork3XEndpoint()
@@ -1451,25 +1448,58 @@ function BG.toggleJumpScare(ativar)
                 for _, player in ipairs(Players:GetPlayers()) do
                     local char = player.Character
                     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                    local hrpAnterior = jumpScareHRP[player.UserId]
+                    local hum = char and char:FindFirstChildOfClass("Humanoid")
                     local part = jumpScareParts[player.UserId]
+                    local hrpAnterior = jumpScareHRP[player.UserId]
+                    local tempoCriacao = jumpScareLastCriacao[player.UserId] or 0
 
-                    if hrp and hrp ~= hrpAnterior then
-                        -- HRP mudou (respawn) → remove antiga e cria nova
-                        if part and part.Parent then
-                            pcall(function() F3X:Remove(part) end)
+                    -- 1) player morto ou sem HRP → remove part
+                    if not hrp or (hum and hum.Health <= 0) then
+                        if part then
+                            removerPartJumpScare(player)
                         end
-                        jumpScareParts[player.UserId] = nil
-                        jumpScareHRP[player.UserId] = hrp
-                        criarPartJumpScare(player)
-                    elseif part and part.Parent and hrp then
-                        -- mesmo HRP, só move
-                        pcall(function() F3X:Move(part, hrp.CFrame) end)
-                    elseif hrp and (not part or not part.Parent) then
-                        -- part sumiu (foi deletada por algo), recria
-                        jumpScareHRP[player.UserId] = hrp
-                        criarPartJumpScare(player)
+                        continue
                     end
+
+                    -- 2) part foi deletada por alguem → limpa referência e recria
+                    if part and not part.Parent then
+                        jumpScareParts[player.UserId] = nil
+                        jumpScareHRP[player.UserId] = nil
+                        jumpScareLastCriacao[player.UserId] = nil
+                        criarPartJumpScare(player)
+                        continue
+                    end
+
+                    -- 3) não tem part → cria
+                    if not part then
+                        criarPartJumpScare(player)
+                        continue
+                    end
+
+                    -- 4) HRP mudou (respawn) → remove antiga e recria
+                    if hrp ~= hrpAnterior then
+                        pcall(function() F3X:Remove(part) end)
+                        jumpScareParts[player.UserId] = nil
+                        jumpScareHRP[player.UserId] = nil
+                        jumpScareLastCriacao[player.UserId] = nil
+                        criarPartJumpScare(player)
+                        continue
+                    end
+
+                    -- 5) part existe mas não está seguindo (>10 studs por >0.5s) → recria
+                    local tempoDesdeCriacao = tick() - tempoCriacao
+                    local distancia = (part.Position - hrp.Position).Magnitude
+                    if tempoDesdeCriacao > 0.5 and distancia > 10 then
+                        pcall(function() F3X:Remove(part) end)
+                        jumpScareParts[player.UserId] = nil
+                        jumpScareHRP[player.UserId] = nil
+                        jumpScareLastCriacao[player.UserId] = nil
+                        criarPartJumpScare(player)
+                        continue
+                    end
+
+                    -- 6) tudo ok, move
+                    pcall(function() F3X:Move(part, hrp.CFrame) end)
                 end
 
                 task.wait(0.01)
@@ -1481,16 +1511,13 @@ function BG.toggleJumpScare(ativar)
         if not jumpScareAtivo then return end
         jumpScareAtivo = false
 
-        -- para o som
         cmdHD(";unmusic")
 
-        -- cancela task
         if jumpScareTask then
             pcall(function() task.cancel(jumpScareTask) end)
             jumpScareTask = nil
         end
 
-        -- desconecta eventos
         if jumpScareConnAdded then
             pcall(function() jumpScareConnAdded:Disconnect() end)
             jumpScareConnAdded = nil
@@ -1504,7 +1531,6 @@ function BG.toggleJumpScare(ativar)
             jumpScareLocalConn = nil
         end
 
-        -- remove todas as parts
         for userId, part in pairs(jumpScareParts) do
             if part and part.Parent then
                 pcall(function() F3X:Remove(part) end)
@@ -1512,6 +1538,7 @@ function BG.toggleJumpScare(ativar)
         end
         jumpScareParts = {}
         jumpScareHRP = {}
+        jumpScareLastCriacao = {}
 
         notifyInfo("Jump Scare desligado")
     end
