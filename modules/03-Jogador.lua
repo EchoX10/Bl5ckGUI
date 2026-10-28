@@ -1544,4 +1544,22 @@ function BG.toggleJumpScare(ativar)
     end
 end
 
+function BG.botaoMensagemTroll()
+    task.spawn(function()
+        notifyInfo("Enviando mensagem troll...")
+
+        cmdHD(";m Hi server!")
+
+        task.wait(5)
+
+        cmdHD(";mr  I  W I L L  B L O W  U P  T H I S  S E R V E R")
+
+        task.wait(1.5)
+
+        cmdHD(";mr BYE BYE!")
+
+        notifySucesso("Mensagem enviada!")
+    end)
+end
+
 print("[Jogador] Modulo carregado")
