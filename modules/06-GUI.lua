@@ -347,6 +347,7 @@ criarBotao("Titulo BL5CK", function()
     cmdHD(";titlebk me BL5CK")
     notifySucesso("Titulo aplicado")
 end, tab4)
+criarBotao("Mensagem Troll", BG.botaoMensagemTroll, tab4)
 
 -- ABA 5: MIDIA
 local tab5 = adicionarAba("Midia", 5)
