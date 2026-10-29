@@ -1067,11 +1067,11 @@ function BG.toggleReanimate(ativar)
                                     end
 
                                     if overrideRot then
-                                        local rx = math.rad(overrideRot.X or 0)
-                                        local ry = math.rad(overrideRot.Y or 0)
-                                        local rz = math.rad(overrideRot.Z or 0)
-                                        cFrameFinal = cFrameFinal * CFrame.fromEulerAnglesXYZ(rx, ry, rz)
-                                    end
+                                    local rx = math.rad(overrideRot.X or 0)
+                                    local ry = math.rad(overrideRot.Y or 0)
+                                    local rz = math.rad(overrideRot.Z or 0)
+                                 cFrameFinal = CFrame.new(cFrameFinal.Position) * CFrame.fromEulerAnglesXYZ(rx, ry, rz)
+                              end
 
                                     if (fakePart.Position - cFrameFinal.Position).Magnitude > 50 then
                                         fakePart.CFrame = cFrameFinal
