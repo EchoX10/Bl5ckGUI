@@ -613,7 +613,7 @@ if ehDono then
         msg.Size = UDim2.new(1, -30, 0, 50)
         msg.Position = UDim2.new(0, 15, 0, 30)
         msg.BackgroundTransparency = 1
-        msg.Text = "Bem vindo(a) de volta dono(a) do script! 🙂🕶️🤏"
+        msg.Text = "Bem vindo(a) de volta dono(a) do script! 🤏🕶️🙂"
         msg.TextColor3 = Color3.fromRGB(255, 255, 255)
         msg.Font = Enum.Font.GothamBold
         msg.TextSize = 13
