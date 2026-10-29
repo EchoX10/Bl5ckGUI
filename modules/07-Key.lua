@@ -709,7 +709,6 @@ if not temKey then
         abrirJanelaMissoes(keyAtual)
     end)
 
-    while not validado do task.wait(0.1) end
 end
 
 print("[Key] Modulo carregado")
