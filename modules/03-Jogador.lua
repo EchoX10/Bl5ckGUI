@@ -1148,7 +1148,6 @@ end
     end
 end
 
--- ============== ARMA ==============
 local function dispararArma()
     if not armaPart or not armaPart.Parent then return end
     if os.clock() - ultimoDisparo < 0.2 then return end
@@ -1158,7 +1157,18 @@ local function dispararArma()
     if not seBTP then return end
 
     local projSize = Vector3.new(0.34, 0.1, 0.12)
-    local dir = armaPart.CFrame.LookVector
+
+    -- direção: SEMPRE pra frente do FakeChar (horizontal)
+    local dir = Vector3.new(0, 0, -1)
+    local fakeTorso = fakeCharParts and fakeCharParts["Torso"]
+    if fakeTorso and fakeTorso.Parent then
+        local fwd = fakeTorso.CFrame.LookVector
+        local flat = Vector3.new(fwd.X, 0, fwd.Z)
+        if flat.Magnitude > 0.01 then
+            dir = flat.Unit
+        end
+    end
+
     local startPos = armaPart.CFrame.Position + dir * 1
     local cf = CFrame.lookAt(startPos, startPos + dir)
 
@@ -1250,8 +1260,8 @@ function BG.toggleArma(ativar)
 
         armaAtiva = true
 
-        BG.PartCframe("Right Arm", "Rotation", Vector3.new(-90, 0, 0))
-        BG.PartCframe("Right Arm", "Position", Vector3.new(0, -0.2, 0))
+        BG.PartCframe("Right Arm", "Rotation", Vector3.new(-90, 0, 90))
+        BG.PartCframe("Right Arm", "Position", Vector3.new(0, 0, 0))
 
         task.wait(0.3)
         
