@@ -709,6 +709,19 @@ if not temKey then
         abrirJanelaMissoes(keyAtual)
     end)
 
+    -- esconde o painel enquanto não validar
+    task.spawn(function()
+        local bgGui = game:GetService("CoreGui"):FindFirstChild("BlackGUI")
+        if bgGui then
+            bgGui.Enabled = false
+        end
+
+        while not validado do task.wait(0.1) end
+
+        if bgGui then
+            bgGui.Enabled = true
+        end
+    end)
 end
 
 print("[Key] Modulo carregado")
