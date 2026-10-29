@@ -59,8 +59,8 @@ loadingGui.DisplayOrder = 9999999
 loadingGui.Parent = CoreGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 180)
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -90)
+mainFrame.Size = UDim2.new(0, 400, 0, 240)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -120)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
@@ -113,14 +113,23 @@ closeBtn.Parent = titleBar
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1, -28, 1, -50)
+contentFrame.Size = UDim2.new(1, -28, 1, -56)
 contentFrame.Position = UDim2.new(0, 14, 0, 44)
 contentFrame.BackgroundTransparency = 1
 contentFrame.Parent = mainFrame
 
+-- ============== LOGO ANIMADO (ping-pong) ==============
+local logoFrame = Instance.new("ImageLabel")
+logoFrame.Name = "LoadingLogo"
+logoFrame.Size = UDim2.new(0, 64, 0, 64)
+logoFrame.Position = UDim2.new(0.5, -32, 0, 8)
+logoFrame.BackgroundTransparency = 1
+logoFrame.ZIndex = 2
+logoFrame.Parent = contentFrame
+
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(1, 0, 0, 26)
-statusLabel.Position = UDim2.new(0, 0, 0, 0)
+statusLabel.Position = UDim2.new(0, 0, 0, 80)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "Iniciando..."
 statusLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -132,7 +141,7 @@ statusLabel.Parent = contentFrame
 
 local subLabel = Instance.new("TextLabel")
 subLabel.Size = UDim2.new(1, 0, 0, 18)
-subLabel.Position = UDim2.new(0, 0, 0, 28)
+subLabel.Position = UDim2.new(0, 0, 0, 108)
 subLabel.BackgroundTransparency = 1
 subLabel.Text = ""
 subLabel.TextColor3 = Color3.fromRGB(130, 130, 130)
@@ -188,7 +197,7 @@ game:GetService("UserInputService").InputEnded:Connect(function(input)
 end)
 
 local minimizado = false
-local tamanhoOriginal = UDim2.new(0, 400, 0, 180)
+local tamanhoOriginal = UDim2.new(0, 400, 0, 240)
 minBtn.MouseButton1Click:Connect(function()
     minimizado = not minimizado
     if minimizado then
@@ -891,6 +900,64 @@ abortarSeCancelado()
         if loadingGui and loadingGui.Parent then
             loadingGui:Destroy()
         end
+    end
+end)
+
+-- ============== LOOP DE ANIMAÇÃO DO LOGO ==============
+task.spawn(function()
+    local frames = {}
+
+    -- espera os arquivos aparecerem no disco (baixados na ETAPA 3.5)
+    while loadingGui.Parent do
+        frames = {}
+        local todos = true
+
+        for i = 1, 4 do
+            local path = "Bl5ckGUI/assets/loading_logo_frame" .. i .. ".png"
+            local existe = false
+            if isfile then
+                local ok, res = pcall(isfile, path)
+                if ok and res then existe = true end
+            end
+
+            if existe and getcustomasset then
+                local ok2, id = pcall(getcustomasset, path)
+                if ok2 and id then
+                    frames[i] = id
+                else
+                    todos = false
+                end
+            else
+                todos = false
+            end
+        end
+
+        if todos and #frames == 4 then break end
+        task.wait(0.5)
+    end
+
+    if #frames ~= 4 then return end
+
+    -- animação ping-pong (1→2→3→4→3→2→1→2→...)
+    local idx = 1
+    local dir = 1
+
+    while loadingGui.Parent do
+        if contentFrame.Visible and frames[idx] then
+            logoFrame.Image = frames[idx]
+        end
+
+        idx = idx + dir
+
+        if idx > 4 then
+            idx = 3
+            dir = -1
+        elseif idx < 1 then
+            idx = 2
+            dir = 1
+        end
+
+        task.wait(0.15)
     end
 end)
 
