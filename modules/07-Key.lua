@@ -93,6 +93,7 @@ local function gerarConta(dif)
     return string.format("%d %s %d", a, op, b), res
 end
 
+-- ============== JANELA MOSTRAR KEY ==============
 local function abrirJanelaMostrarKey(key)
     local gui = Instance.new("ScreenGui")
     gui.Name = "BG_MostrarKey"
@@ -102,8 +103,8 @@ local function abrirJanelaMostrarKey(key)
     gui.Parent = CoreGui
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 340, 0, 200)
-    frame.Position = UDim2.new(0.5, -170, 0.5, -100)
+    frame.Size = UDim2.new(0, 300, 0, 160)
+    frame.Position = UDim2.new(0.5, -150, 0.5, -80)
     frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     frame.BorderSizePixel = 0
     frame.Parent = gui
@@ -115,37 +116,37 @@ local function abrirJanelaMostrarKey(key)
     stroke.Parent = frame
 
     local tit = Instance.new("TextLabel")
-    tit.Size = UDim2.new(1, 0, 0, 40)
+    tit.Size = UDim2.new(1, 0, 0, 35)
     tit.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
     tit.Text = "SUA KEY"
     tit.TextColor3 = Color3.fromRGB(255, 255, 255)
     tit.Font = Enum.Font.GothamBold
-    tit.TextSize = 15
+    tit.TextSize = 14
     tit.Parent = frame
     Instance.new("UICorner", tit).CornerRadius = UDim.new(0, 12)
 
     local keyBox = Instance.new("TextBox")
-    keyBox.Size = UDim2.new(1, -40, 0, 50)
-    keyBox.Position = UDim2.new(0, 20, 0, 60)
+    keyBox.Size = UDim2.new(1, -30, 0, 40)
+    keyBox.Position = UDim2.new(0, 15, 0, 45)
     keyBox.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     keyBox.BorderSizePixel = 0
     keyBox.Text = key
     keyBox.TextColor3 = Color3.fromRGB(100, 255, 100)
     keyBox.Font = Enum.Font.GothamBold
-    keyBox.TextSize = 18
+    keyBox.TextSize = 16
     keyBox.TextEditable = false
     keyBox.ClearTextOnFocus = false
     keyBox.Parent = frame
     Instance.new("UICorner", keyBox).CornerRadius = UDim.new(0, 8)
 
     local copiar = Instance.new("TextButton")
-    copiar.Size = UDim2.new(1, -40, 0, 45)
-    copiar.Position = UDim2.new(0, 20, 0, 120)
+    copiar.Size = UDim2.new(1, -30, 0, 40)
+    copiar.Position = UDim2.new(0, 15, 0, 95)
     copiar.BackgroundColor3 = Color3.fromRGB(20, 60, 30)
     copiar.Text = "COPIAR KEY"
     copiar.TextColor3 = Color3.fromRGB(255, 255, 255)
     copiar.Font = Enum.Font.GothamBold
-    copiar.TextSize = 14
+    copiar.TextSize = 13
     copiar.Parent = frame
     Instance.new("UICorner", copiar).CornerRadius = UDim.new(0, 8)
 
@@ -182,6 +183,7 @@ local function abrirJanelaMostrarKey(key)
     fechar.MouseButton1Click:Connect(function() gui:Destroy() end)
 end
 
+-- ============== JANELA MISSÕES ==============
 local function abrirJanelaMissoes(key)
     local gui = Instance.new("ScreenGui")
     gui.Name = "BG_Missoes"
@@ -191,8 +193,8 @@ local function abrirJanelaMissoes(key)
     gui.Parent = CoreGui
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 450, 0, 550)
-    frame.Position = UDim2.new(0.5, -225, 0.5, -275)
+    frame.Size = UDim2.new(0, 400, 0, 420)
+    frame.Position = UDim2.new(0.5, -200, 0.5, -210)
     frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     frame.BorderSizePixel = 0
     frame.Parent = gui
@@ -204,28 +206,28 @@ local function abrirJanelaMissoes(key)
     stroke.Parent = frame
 
     local tit = Instance.new("TextLabel")
-    tit.Size = UDim2.new(1, 0, 0, 50)
+    tit.Size = UDim2.new(1, 0, 0, 40)
     tit.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
-    tit.Text = "MISSOES - Complete as 3 pra obter a key"
+    tit.Text = "MISSOES - Complete as 3"
     tit.TextColor3 = Color3.fromRGB(255, 255, 255)
     tit.Font = Enum.Font.GothamBold
-    tit.TextSize = 15
+    tit.TextSize = 14
     tit.Parent = frame
     Instance.new("UICorner", tit).CornerRadius = UDim.new(0, 12)
 
     local progresso = Instance.new("TextLabel")
-    progresso.Size = UDim2.new(1, -40, 0, 30)
-    progresso.Position = UDim2.new(0, 20, 0, 60)
+    progresso.Size = UDim2.new(1, -40, 0, 25)
+    progresso.Position = UDim2.new(0, 20, 0, 45)
     progresso.BackgroundTransparency = 1
     progresso.Text = "Progresso: 0/3"
     progresso.TextColor3 = Color3.fromRGB(200, 200, 200)
     progresso.Font = Enum.Font.GothamBold
-    progresso.TextSize = 13
+    progresso.TextSize = 12
     progresso.Parent = frame
 
     local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, -40, 1, -180)
-    scroll.Position = UDim2.new(0, 20, 0, 100)
+    scroll.Size = UDim2.new(1, -30, 1, -85)
+    scroll.Position = UDim2.new(0, 15, 0, 75)
     scroll.BackgroundTransparency = 1
     scroll.ScrollBarThickness = 4
     scroll.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
@@ -235,33 +237,33 @@ local function abrirJanelaMissoes(key)
     scroll.Parent = frame
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 15)
+    layout.Padding = UDim.new(0, 10)
     layout.Parent = scroll
 
     local completas = 0
 
     -- MISSAO 1
     local m1 = Instance.new("Frame")
-    m1.Size = UDim2.new(1, -10, 0, 130)
+    m1.Size = UDim2.new(1, -10, 0, 110)
     m1.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     m1.BorderSizePixel = 0
     m1.Parent = scroll
     Instance.new("UICorner", m1).CornerRadius = UDim.new(0, 8)
 
     local m1t = Instance.new("TextLabel")
-    m1t.Size = UDim2.new(1, -20, 0, 30)
+    m1t.Size = UDim2.new(1, -20, 0, 25)
     m1t.Position = UDim2.new(0, 10, 0, 5)
     m1t.BackgroundTransparency = 1
-    m1t.Text = "Missao 1: Matematica (5 contas, 4 acertos)"
+    m1t.Text = "Missao 1: Matematica (5 contas)"
     m1t.TextColor3 = Color3.fromRGB(255, 255, 255)
     m1t.Font = Enum.Font.GothamBold
-    m1t.TextSize = 13
+    m1t.TextSize = 12
     m1t.TextXAlignment = Enum.TextXAlignment.Left
     m1t.Parent = m1
 
     local m1b = Instance.new("TextButton")
-    m1b.Size = UDim2.new(1, -20, 0, 45)
-    m1b.Position = UDim2.new(0, 10, 0, 40)
+    m1b.Size = UDim2.new(1, -20, 0, 38)
+    m1b.Position = UDim2.new(0, 10, 0, 35)
     m1b.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
     m1b.Text = "INICIAR"
     m1b.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -297,22 +299,22 @@ local function abrirJanelaMissoes(key)
             m1b.Text = string.format("%d/5: %s = ? (10s)", rodada, conta)
 
             local input = Instance.new("TextBox")
-            input.Size = UDim2.new(1, -20, 0, 35)
-            input.Position = UDim2.new(0, 10, 0, 90)
+            input.Size = UDim2.new(1, -110, 0, 32)
+            input.Position = UDim2.new(0, 10, 0, 75)
             input.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             input.PlaceholderText = "Resposta..."
             input.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
             input.Text = ""
             input.TextColor3 = Color3.fromRGB(255, 255, 255)
             input.Font = Enum.Font.GothamBold
-            input.TextSize = 13
+            input.TextSize = 12
             input.Parent = m1
             Instance.new("UICorner", input).CornerRadius = UDim.new(0, 6)
             input:CaptureFocus()
 
             local ok = Instance.new("TextButton")
-            ok.Size = UDim2.new(0, 80, 0, 35)
-            ok.Position = UDim2.new(1, -90, 0, 90)
+            ok.Size = UDim2.new(0, 80, 0, 32)
+            ok.Position = UDim2.new(1, -90, 0, 75)
             ok.BackgroundColor3 = Color3.fromRGB(20, 60, 30)
             ok.Text = "OK"
             ok.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -344,26 +346,26 @@ local function abrirJanelaMissoes(key)
 
     -- MISSAO 2
     local m2 = Instance.new("Frame")
-    m2.Size = UDim2.new(1, -10, 0, 130)
+    m2.Size = UDim2.new(1, -10, 0, 110)
     m2.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     m2.BorderSizePixel = 0
     m2.Parent = scroll
     Instance.new("UICorner", m2).CornerRadius = UDim.new(0, 8)
 
     local m2t = Instance.new("TextLabel")
-    m2t.Size = UDim2.new(1, -20, 0, 30)
+    m2t.Size = UDim2.new(1, -20, 0, 25)
     m2t.Position = UDim2.new(0, 10, 0, 5)
     m2t.BackgroundTransparency = 1
     m2t.Text = "Missao 2: Digite a frase (3 frases)"
     m2t.TextColor3 = Color3.fromRGB(255, 255, 255)
     m2t.Font = Enum.Font.GothamBold
-    m2t.TextSize = 13
+    m2t.TextSize = 12
     m2t.TextXAlignment = Enum.TextXAlignment.Left
     m2t.Parent = m2
 
     local m2b = Instance.new("TextButton")
-    m2b.Size = UDim2.new(1, -20, 0, 45)
-    m2b.Position = UDim2.new(0, 10, 0, 40)
+    m2b.Size = UDim2.new(1, -20, 0, 38)
+    m2b.Position = UDim2.new(0, 10, 0, 35)
     m2b.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
     m2b.Text = "INICIAR"
     m2b.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -398,26 +400,26 @@ local function abrirJanelaMissoes(key)
             m2b.Text = string.format("%d/3: Digite exato (15s)", idx)
 
             local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, -20, 0, 25)
-            lbl.Position = UDim2.new(0, 10, 0, 90)
+            lbl.Size = UDim2.new(1, -20, 0, 22)
+            lbl.Position = UDim2.new(0, 10, 0, 75)
             lbl.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             lbl.Text = frase
             lbl.TextColor3 = Color3.fromRGB(255, 255, 100)
             lbl.Font = Enum.Font.GothamBold
-            lbl.TextSize = 11
+            lbl.TextSize = 10
             lbl.Parent = m2
             Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 6)
 
             local input = Instance.new("TextBox")
-            input.Size = UDim2.new(1, -20, 0, 30)
-            input.Position = UDim2.new(0, 10, 0, 120)
+            input.Size = UDim2.new(1, -20, 0, 28)
+            input.Position = UDim2.new(0, 10, 0, 100)
             input.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             input.PlaceholderText = "Digite aqui..."
             input.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
             input.Text = ""
             input.TextColor3 = Color3.fromRGB(255, 255, 255)
             input.Font = Enum.Font.Gotham
-            input.TextSize = 12
+            input.TextSize = 11
             input.Parent = m2
             Instance.new("UICorner", input).CornerRadius = UDim.new(0, 6)
             input:CaptureFocus()
@@ -444,26 +446,26 @@ local function abrirJanelaMissoes(key)
 
     -- MISSAO 3
     local m3 = Instance.new("Frame")
-    m3.Size = UDim2.new(1, -10, 0, 130)
+    m3.Size = UDim2.new(1, -10, 0, 110)
     m3.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     m3.BorderSizePixel = 0
     m3.Parent = scroll
     Instance.new("UICorner", m3).CornerRadius = UDim.new(0, 8)
 
     local m3t = Instance.new("TextLabel")
-    m3t.Size = UDim2.new(1, -20, 0, 30)
+    m3t.Size = UDim2.new(1, -20, 0, 25)
     m3t.Position = UDim2.new(0, 10, 0, 5)
     m3t.BackgroundTransparency = 1
     m3t.Text = "Missao 3: Complete a frase (4 frases)"
     m3t.TextColor3 = Color3.fromRGB(255, 255, 255)
     m3t.Font = Enum.Font.GothamBold
-    m3t.TextSize = 13
+    m3t.TextSize = 12
     m3t.TextXAlignment = Enum.TextXAlignment.Left
     m3t.Parent = m3
 
     local m3b = Instance.new("TextButton")
-    m3b.Size = UDim2.new(1, -20, 0, 45)
-    m3b.Position = UDim2.new(0, 10, 0, 40)
+    m3b.Size = UDim2.new(1, -20, 0, 38)
+    m3b.Position = UDim2.new(0, 10, 0, 35)
     m3b.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
     m3b.Text = "INICIAR"
     m3b.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -503,26 +505,26 @@ local function abrirJanelaMissoes(key)
             m3b.Text = string.format("%d/4: Complete (10s)", idx)
 
             local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, -20, 0, 25)
-            lbl.Position = UDim2.new(0, 10, 0, 90)
+            lbl.Size = UDim2.new(1, -20, 0, 22)
+            lbl.Position = UDim2.new(0, 10, 0, 75)
             lbl.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             lbl.Text = missao.frase
             lbl.TextColor3 = Color3.fromRGB(255, 255, 100)
             lbl.Font = Enum.Font.GothamBold
-            lbl.TextSize = 11
+            lbl.TextSize = 10
             lbl.Parent = m3
             Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 6)
 
             local input = Instance.new("TextBox")
-            input.Size = UDim2.new(1, -20, 0, 30)
-            input.Position = UDim2.new(0, 10, 0, 120)
+            input.Size = UDim2.new(1, -20, 0, 28)
+            input.Position = UDim2.new(0, 10, 0, 100)
             input.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             input.PlaceholderText = "Resposta..."
             input.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
             input.Text = ""
             input.TextColor3 = Color3.fromRGB(255, 255, 255)
             input.Font = Enum.Font.Gotham
-            input.TextSize = 12
+            input.TextSize = 11
             input.Parent = m3
             Instance.new("UICorner", input).CornerRadius = UDim.new(0, 6)
             input:CaptureFocus()
@@ -545,25 +547,6 @@ local function abrirJanelaMissoes(key)
             end)
         end
         proxima()
-    end)
-
-    local mostrar = Instance.new("TextButton")
-    mostrar.Size = UDim2.new(1, -40, 0, 45)
-    mostrar.Position = UDim2.new(0, 20, 1, -60)
-    mostrar.BackgroundColor3 = Color3.fromRGB(20, 60, 30)
-    mostrar.Text = "VER KEY"
-    mostrar.TextColor3 = Color3.fromRGB(255, 255, 255)
-    mostrar.Font = Enum.Font.GothamBold
-    mostrar.TextSize = 13
-    mostrar.Parent = frame
-    Instance.new("UICorner", mostrar).CornerRadius = UDim.new(0, 8)
-
-    mostrar.MouseButton1Click:Connect(function()
-        if completas >= 3 then
-            abrirJanelaMostrarKey(key)
-        else
-            notifyErro("Complete as 3 missoes primeiro!")
-        end
     end)
 
     local fechar = Instance.new("TextButton")
@@ -597,8 +580,8 @@ if not temKey then
     loginGui.Parent = CoreGui
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 350, 0, 420)
-    frame.Position = UDim2.new(0.5, -175, 0.5, -210)
+    frame.Size = UDim2.new(0, 320, 0, 295)
+    frame.Position = UDim2.new(0.5, -160, 0.5, -147)
     frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     frame.BorderSizePixel = 0
     frame.Parent = loginGui
@@ -610,83 +593,95 @@ if not temKey then
     stroke.Parent = frame
 
     local tit = Instance.new("TextLabel")
-    tit.Size = UDim2.new(1, 0, 0, 50)
+    tit.Size = UDim2.new(1, 0, 0, 40)
     tit.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
     tit.Text = "BL5CK GUI KEY"
     tit.TextColor3 = Color3.fromRGB(255, 255, 255)
     tit.Font = Enum.Font.GothamBold
-    tit.TextSize = 16
+    tit.TextSize = 15
     tit.Parent = frame
     Instance.new("UICorner", tit).CornerRadius = UDim.new(0, 12)
 
+    local closeLogin = Instance.new("TextButton")
+    closeLogin.Size = UDim2.new(0, 28, 0, 28)
+    closeLogin.Position = UDim2.new(1, -32, 0, 6)
+    closeLogin.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    closeLogin.Text = "X"
+    closeLogin.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeLogin.Font = Enum.Font.GothamBold
+    closeLogin.TextSize = 12
+    closeLogin.Parent = frame
+    Instance.new("UICorner", closeLogin).CornerRadius = UDim.new(0, 6)
+
     local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(1, -40, 0, 50)
-    info.Position = UDim2.new(0, 20, 0, 60)
+    info.Size = UDim2.new(1, -40, 0, 28)
+    info.Position = UDim2.new(0, 20, 0, 45)
     info.BackgroundTransparency = 1
-    info.Text = "Clique em VER KEY pra copiar a key.\nOu complete as missoes."
+    info.Text = "Clique em VER KEY pra copiar.\nOu complete as missoes."
     info.TextColor3 = Color3.fromRGB(200, 200, 200)
     info.Font = Enum.Font.Gotham
-    info.TextSize = 12
+    info.TextSize = 11
     info.TextWrapped = true
     info.Parent = frame
 
     local input = Instance.new("TextBox")
-    input.Size = UDim2.new(1, -40, 0, 40)
-    input.Position = UDim2.new(0, 20, 0, 120)
+    input.Size = UDim2.new(1, -40, 0, 35)
+    input.Position = UDim2.new(0, 20, 0, 78)
     input.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     input.PlaceholderText = "Cole a key aqui..."
     input.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
     input.Text = ""
     input.TextColor3 = Color3.fromRGB(255, 255, 255)
     input.Font = Enum.Font.GothamBold
-    input.TextSize = 14
+    input.TextSize = 13
     input.Parent = frame
     Instance.new("UICorner", input).CornerRadius = UDim.new(0, 8)
 
     local status = Instance.new("TextLabel")
-    status.Size = UDim2.new(1, -40, 0, 25)
-    status.Position = UDim2.new(0, 20, 0, 165)
+    status.Size = UDim2.new(1, -40, 0, 16)
+    status.Position = UDim2.new(0, 20, 0, 115)
     status.BackgroundTransparency = 1
     status.Text = ""
     status.TextColor3 = Color3.fromRGB(255, 100, 100)
     status.Font = Enum.Font.GothamBold
-    status.TextSize = 11
+    status.TextSize = 10
     status.Parent = frame
 
     local validar = Instance.new("TextButton")
-    validar.Size = UDim2.new(1, -40, 0, 45)
-    validar.Position = UDim2.new(0, 20, 0, 195)
+    validar.Size = UDim2.new(1, -40, 0, 38)
+    validar.Position = UDim2.new(0, 20, 0, 135)
     validar.BackgroundColor3 = Color3.fromRGB(20, 60, 30)
     validar.Text = "VALIDAR KEY"
     validar.TextColor3 = Color3.fromRGB(255, 255, 255)
     validar.Font = Enum.Font.GothamBold
-    validar.TextSize = 13
+    validar.TextSize = 12
     validar.Parent = frame
     Instance.new("UICorner", validar).CornerRadius = UDim.new(0, 8)
 
     local verKey = Instance.new("TextButton")
-    verKey.Size = UDim2.new(1, -40, 0, 45)
-    verKey.Position = UDim2.new(0, 20, 0, 250)
+    verKey.Size = UDim2.new(1, -40, 0, 38)
+    verKey.Position = UDim2.new(0, 20, 0, 178)
     verKey.BackgroundColor3 = Color3.fromRGB(50, 80, 130)
     verKey.Text = "VER KEY"
     verKey.TextColor3 = Color3.fromRGB(255, 255, 255)
     verKey.Font = Enum.Font.GothamBold
-    verKey.TextSize = 13
+    verKey.TextSize = 12
     verKey.Parent = frame
     Instance.new("UICorner", verKey).CornerRadius = UDim.new(0, 8)
 
     local missoes = Instance.new("TextButton")
-    missoes.Size = UDim2.new(1, -40, 0, 45)
-    missoes.Position = UDim2.new(0, 20, 0, 305)
+    missoes.Size = UDim2.new(1, -40, 0, 38)
+    missoes.Position = UDim2.new(0, 20, 0, 221)
     missoes.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
     missoes.Text = "FAZER MISSOES"
     missoes.TextColor3 = Color3.fromRGB(255, 255, 255)
     missoes.Font = Enum.Font.GothamBold
-    missoes.TextSize = 13
+    missoes.TextSize = 12
     missoes.Parent = frame
     Instance.new("UICorner", missoes).CornerRadius = UDim.new(0, 8)
 
     local validado = false
+    local cancelado = false
 
     validar.MouseButton1Click:Connect(function()
         if input.Text:upper() == keyAtual then
@@ -709,17 +704,22 @@ if not temKey then
         abrirJanelaMissoes(keyAtual)
     end)
 
+    closeLogin.MouseButton1Click:Connect(function()
+        cancelado = true
+        loginGui:Destroy()
+    end)
+
     -- esconde o painel enquanto não validar
     task.spawn(function()
-        local bgGui = game:GetService("CoreGui"):FindFirstChild("BlackGUI")
-        if bgGui then
-            bgGui.Enabled = false
+        while not validado and not cancelado do
+            local bgGui = game:GetService("CoreGui"):FindFirstChild("BlackGUI")
+            if bgGui then bgGui.Enabled = false end
+            task.wait(0.1)
         end
 
-        while not validado do task.wait(0.1) end
-
-        if bgGui then
-            bgGui.Enabled = true
+        if validado then
+            local bgGui = game:GetService("CoreGui"):FindFirstChild("BlackGUI")
+            if bgGui then bgGui.Enabled = true end
         end
     end)
 end
