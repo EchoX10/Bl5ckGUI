@@ -1067,11 +1067,22 @@ function BG.toggleReanimate(ativar)
                                     end
 
                                     if overrideRot then
-                                    local rx = math.rad(overrideRot.X or 0)
-                                    local ry = math.rad(overrideRot.Y or 0)
-                                    local rz = math.rad(overrideRot.Z or 0)
-                                 cFrameFinal = CFrame.new(cFrameFinal.Position) * CFrame.fromEulerAnglesXYZ(rx, ry, rz)
-                              end
+    local rx = math.rad(overrideRot.X or 0)
+    local ry = math.rad(overrideRot.Y or 0)
+    local rz = math.rad(overrideRot.Z or 0)
+
+    -- yaw do player (so esquerda/direita, sem pitch/roll)
+    local yaw = 0
+    local hrpReal = charAtual:FindFirstChild("HumanoidRootPart")
+    if hrpReal then
+        local look = hrpReal.CFrame.LookVector
+        yaw = math.atan2(look.X, look.Z)
+    end
+
+    cFrameFinal = CFrame.new(cFrameFinal.Position)
+        * CFrame.Angles(0, yaw, 0)
+        * CFrame.fromEulerAnglesXYZ(rx, ry, rz)
+end
 
                                     if (fakePart.Position - cFrameFinal.Position).Magnitude > 50 then
                                         fakePart.CFrame = cFrameFinal
