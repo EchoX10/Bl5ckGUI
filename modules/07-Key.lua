@@ -13,6 +13,11 @@ local KEY_FILE = "Bl5ckGUI/key/blackgui_key.txt"
 local KEY_EXPIRE_FILE = "Bl5ckGUI/key/blackgui_expire.txt"
 local TEMPO_EXPIRACAO = 35 * 60
 
+-- ============== DONOS (não precisam de key) ==============
+local DONOS = {
+    ["shajuajajaj"] = true,
+}
+
 local function gerarKey()
     local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     local k = ""
@@ -563,10 +568,81 @@ local function abrirJanelaMissoes(key)
 end
 
 -- ============== TELA DE LOGIN ==============
+local ehDono = DONOS[plr.Name] == true
 local temKey, keyAtual = keyValida()
 BG.keyAtual = keyAtual
 
-if not temKey then
+if ehDono then
+    -- dono: pula o key system
+    task.spawn(function()
+        task.wait(1.5)
+        local notifGui = Instance.new("ScreenGui")
+        notifGui.Name = "BG_DonoBemVindo"
+        notifGui.ResetOnSpawn = false
+        notifGui.IgnoreGuiInset = true
+        notifGui.DisplayOrder = 1000002
+        notifGui.Parent = CoreGui
+
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(0, 380, 0, 90)
+        frame.Position = UDim2.new(0.5, -190, 0.5, -45)
+        frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        frame.BorderSizePixel = 0
+        frame.BackgroundTransparency = 1
+        frame.Parent = notifGui
+        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(40, 180, 70)
+        stroke.Thickness = 2
+        stroke.Parent = frame
+
+        local tit = Instance.new("TextLabel")
+        tit.Size = UDim2.new(1, 0, 0, 30)
+        tit.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+        tit.BackgroundTransparency = 1
+        tit.Text = "👑 DONO DETECTADO"
+        tit.TextColor3 = Color3.fromRGB(255, 215, 0)
+        tit.Font = Enum.Font.GothamBold
+        tit.TextSize = 14
+        tit.Parent = frame
+        Instance.new("UICorner", tit).CornerRadius = UDim.new(0, 12)
+
+        local msg = Instance.new("TextLabel")
+        msg.Size = UDim2.new(1, -30, 0, 50)
+        msg.Position = UDim2.new(0, 15, 0, 30)
+        msg.BackgroundTransparency = 1
+        msg.Text = "Bem vindo(a) de volta dono(a) do script! 🙂🕶️🤏"
+        msg.TextColor3 = Color3.fromRGB(255, 255, 255)
+        msg.Font = Enum.Font.GothamBold
+        msg.TextSize = 13
+        msg.TextWrapped = true
+        msg.Parent = frame
+
+        TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            BackgroundTransparency = 0.1
+        }):Play()
+        TweenService:Create(tit, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            BackgroundTransparency = 0.1
+        }):Play()
+
+        task.wait(5)
+
+        TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 380, 0, 0)
+        }):Play()
+        TweenService:Create(tit, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            BackgroundTransparency = 1
+        }):Play()
+        TweenService:Create(msg, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            TextTransparency = 1
+        }):Play()
+
+        task.wait(0.4)
+        notifGui:Destroy()
+    end)
+elseif not temKey then
     keyAtual = gerarKey()
     BG.keyAtual = keyAtual
     salvarKey(keyAtual)
