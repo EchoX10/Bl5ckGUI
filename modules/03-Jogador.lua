@@ -1251,7 +1251,7 @@ function BG.toggleArma(ativar)
         armaAtiva = true
 
         BG.PartCframe("Right Arm", "Rotation", Vector3.new(90, 0, 0))
-        BG.PartCframe("Right Arm", "Position", Vector3.new(1.6, 1.1, 0))
+        BG.PartCframe("Right Arm", "Position", Vector3.new(0, 0, 0))
 
         task.wait(0.3)
         
