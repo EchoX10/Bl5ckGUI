@@ -8,6 +8,7 @@ local TweenService = BG.TweenService
 local notifySucesso = BG.notifySucesso
 local notifyErro = BG.notifyErro
 local notifyInfo = BG.notifyInfo
+local plr = BG.plr
 
 local KEY_FILE = "Bl5ckGUI/key/blackgui_key.txt"
 local KEY_EXPIRE_FILE = "Bl5ckGUI/key/blackgui_expire.txt"
