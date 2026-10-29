@@ -1300,27 +1300,45 @@ function BG.toggleArma(ativar)
         end)
 
         armaTask = task.spawn(function()
-            local RS = game:GetService("RunService")
-            local ultimo = 0
-            local GUARD = 0.01
-            while armaAtiva and reanimateAtivo do
-                RS.Heartbeat:Wait()
-                local agora = os.clock()
-                if agora - ultimo >= GUARD then
-                    ultimo = agora
-                    local rightArm = fakeCharParts and fakeCharParts["Right Arm"]
-                    if rightArm and rightArm.Parent and armaPart and armaPart.Parent then
-                        local handCF = rightArm.CFrame * CFrame.new(0, -rightArm.Size.Y/2, 0)
-                        local handDir = rightArm.CFrame.LookVector
-                        local armaCF = CFrame.lookAt(
-                            handCF.Position + handDir * (armaSize.X/2),
-                            handCF.Position + handDir * (armaSize.X/2 + 1)
-                        )
-                        pcall(function() F3X:Move(armaPart, armaCF) end)
+    local RS = game:GetService("RunService")
+    local ultimo = 0
+    local GUARD = 0.01
+    while armaAtiva and reanimateAtivo do
+        RS.Heartbeat:Wait()
+        local agora = os.clock()
+        if agora - ultimo >= GUARD then
+            ultimo = agora
+            local rightArm = fakeCharParts and fakeCharParts["Right Arm"]
+            local fakeTorso = fakeCharParts and fakeCharParts["Torso"]
+            if rightArm and rightArm.Parent and armaPart and armaPart.Parent then
+                -- posição: ponta do braço (mão)
+                local handCF = rightArm.CFrame * CFrame.new(0, -rightArm.Size.Y/2, 0)
+
+                -- direção: SEMPRE pra frente do FakeChar (horizontal)
+                local dir = Vector3.new(0, 0, -1)
+                if fakeTorso and fakeTorso.Parent then
+                    local fwd = fakeTorso.CFrame.LookVector
+                    local flat = Vector3.new(fwd.X, 0, fwd.Z)
+                    if flat.Magnitude > 0.01 then
+                        dir = flat.Unit
                     end
                 end
+
+                -- arma na mão apontando pra frente
+                local armaCF = CFrame.lookAt(handCF.Position, handCF.Position + dir)
+                pcall(function() F3X:Move(armaPart, armaCF) end)
             end
-        end)
+        end
+    end
+end)
+                
+                -- arma na mão apontando pra frente
+                local armaCF = CFrame.lookAt(handCF.Position, handCF.Position + dir)
+                pcall(function() F3X:Move(armaPart, armaCF) end)
+            end
+        end
+    end
+end)
 
         armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
             if gpe then return end
