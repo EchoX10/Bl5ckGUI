@@ -1620,4 +1620,163 @@ function BG.botaoMensagemTroll()
     end)
 end
 
+-- ============================================================
+-- ARMA CUSTOM (server-side via F3X)
+-- ============================================================
+local ARMA_ACCESSORY_ID = "117306365653785"
+local ARMA_ANIM_ID      = "rbxassetid://204295235"
+local ARMA_HANDLE_SCALE = 2.5
+local ARMA_HITBOX_SIZE  = Vector3.new(8, 8, 8)  -- hitbox server-side
+local ARMA_KILL_CD      = 0.5
+local ARMA_ATTACK_WIN   = 2
+
+local _armaAtiva      = false
+local _armaHandle     = nil
+local _armaHitbox     = nil
+local _armaTrack      = nil
+local _armaInputConn  = nil
+local _armaTouchConn  = nil
+local _armaUltimoTiro = 0
+local _armaKillCd     = 0
+
+local function _armaAcharHandle()
+    local char = game.Players.LocalPlayer.Character
+    if not char then return nil end
+    local h = nil
+    for _, v in ipairs(char:GetChildren()) do
+        if v:IsA("Accessory") then
+            local hh = v:FindFirstChild("Handle")
+            if hh then h = hh end
+        end
+    end
+    return h
+end
+
+local function _armaAumentarServerSide(h)
+    if not h or not BG.se then return end
+    local mesh = h:FindFirstChildOfClass("SpecialMesh")
+    if mesh then
+        -- aumenta o mesh no servidor
+        BG.se:InvokeServer("SyncMesh", {{
+            Part  = h,
+            Scale = mesh.Scale * ARMA_HANDLE_SCALE
+        }})
+    else
+        -- sem mesh: aumenta o Size no servidor
+        BG.se:InvokeServer("SyncResize", {{
+            Part   = h,
+            CFrame = h.CFrame,
+            Size   = h.Size * ARMA_HANDLE_SCALE
+        }})
+    end
+end
+
+local function _armaCriarHitboxServerSide(h)
+    if not h or not BG.se then return end
+    local cf = h.CFrame
+    local box = BG.se:InvokeServer("CreatePart", "Normal", cf, workspace)
+    if not box then return end
+    -- ajusta tamanho, transparência e colisão no servidor
+    BG.se:InvokeServer("SyncResize",    {{Part = box, CFrame = cf, Size = ARMA_HITBOX_SIZE}})
+    BG.se:InvokeServer("SyncMaterial",  {{Part = box, Transparency = 1}})
+    BG.se:InvokeServer("SyncCollision", {{Part = box, CanCollide = false}})
+    -- solda no handle (server-side)
+    BG.se:InvokeServer("CreateWelds", {h, box}, h)
+    return box
+end
+
+local function _armaTocarAnim()
+    local char = game.Players.LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    if not _armaTrack or _armaTrack.Animation.AnimationId ~= ARMA_ANIM_ID then
+        if _armaTrack then _armaTrack:Stop() end
+        local a = Instance.new("Animation")
+        a.AnimationId = ARMA_ANIM_ID
+        _armaTrack = hum:LoadAnimation(a)
+    end
+    _armaTrack:Stop()
+    _armaTrack:Play()
+    _armaUltimoTiro = tick()
+end
+
+local function _armaMatar(nome)
+    if tick() - _armaKillCd < ARMA_KILL_CD then return end
+    _armaKillCd = tick()
+    if BG.cmdHD then BG.cmdHD(";kill " .. nome) end  -- HD Admin = server-side
+    if BG.notificar then BG.notificar("Matou: " .. nome, "sucesso") end
+end
+
+function BG.ligarArmaCustom()
+    if _armaAtiva then return end
+    if not BG.se then
+        if BG.notificar then BG.notificar("F3X não encontrado", "erro") end
+        return
+    end
+    _armaAtiva = true
+
+    if BG.cmdHD then BG.cmdHD(";hat me " .. ARMA_ACCESSORY_ID) end
+    if BG.notificar then BG.notificar("Equipando arma...", "info") end
+
+    task.wait(1.2) -- espera o acessório replicar do servidor
+
+    _armaHandle = _armaAcharHandle()
+    if not _armaHandle then
+        if BG.notificar then BG.notificar("Handle não encontrado", "erro") end
+        _armaAtiva = false
+        return
+    end
+
+    -- 1) aumenta o handle NO SERVIDOR
+    _armaAumentarServerSide(_armaHandle)
+
+    -- 2) cria hitbox invisível server-side, soldada no handle
+    _armaHitbox = _armaCriarHitboxServerSide(_armaHandle)
+
+    -- 3) toque na tela -> animação (animação é sempre client)
+    if _armaInputConn then _armaInputConn:Disconnect() end
+    _armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+        if gp then return end
+        if input.UserInputType == Enum.UserInputType.Touch
+           or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            _armaTocarAnim()
+        end
+    end)
+
+    -- 4) encostou na hitbox durante o ataque -> ;kill (HD Admin server-side)
+    if _armaTouchConn then _armaTouchConn:Disconnect() end
+    if _armaHitbox then
+        _armaTouchConn = _armaHitbox.Touched:Connect(function(hit)
+            if not _armaAtiva then return end
+            if tick() - _armaUltimoTiro > ARMA_ATTACK_WIN then return end
+            local hitChar = hit.Parent
+            if not hitChar then return end
+            local hitPlr = game.Players:GetPlayerFromCharacter(hitChar)
+            if not hitPlr or hitPlr == game.Players.LocalPlayer then return end
+            _armaMatar(hitPlr.Name)
+        end)
+    end
+
+    if BG.notificar then BG.notificar("Arma Custom ligada (server-side)", "sucesso") end
+end
+
+function BG.desligarArmaCustom()
+    if not _armaAtiva then return end
+    _armaAtiva = false
+
+    -- remove hitbox do servidor
+    if _armaHitbox and BG.se then
+        BG.se:InvokeServer("Remove", {_armaHitbox})
+    end
+    _armaHitbox = nil
+    _armaHandle = nil
+    _armaUltimoTiro = 0
+
+    if _armaTrack then _armaTrack:Stop() end
+    if _armaInputConn then _armaInputConn:Disconnect() _armaInputConn = nil end
+    if _armaTouchConn then _armaTouchConn:Disconnect() _armaTouchConn = nil end
+    if BG.notificar then BG.notificar("Arma Custom desligada", "info") end
+end
+
 print("[Jogador] Modulo carregado")
