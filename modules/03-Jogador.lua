@@ -1595,7 +1595,7 @@ local ARMA_ATTACK_WIN   = 2
 -- 🎯 rotação em GRAUS
 local ARMA_ROT_X = 0
 local ARMA_ROT_Y = 180
-local ARMA_ROT_Z = 180
+local ARMA_ROT_Z = 0
 local ARMA_OFFSET_POS = Vector3.new(0, -1, 0)
 local ARMA_MOVE_POS_EPS = 0.05
 local ARMA_MOVE_ROT_EPS = 0.02
