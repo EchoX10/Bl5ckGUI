@@ -1594,11 +1594,9 @@ local ARMA_ATTACK_WIN   = 2
 
 -- 🎯 rotação em GRAUS
 local ARMA_ROT_X = 0
-local ARMA_ROT_Y = -50
-local ARMA_ROT_Z = 80
--- offset relativo ao braço
+local ARMA_ROT_Y = 0
+local ARMA_ROT_Z = 0
 local ARMA_OFFSET_POS = Vector3.new(0, -1, 0)
--- otimização: só manda SyncMove se mudou o suficiente
 local ARMA_MOVE_POS_EPS = 0.05
 local ARMA_MOVE_ROT_EPS = 0.02
 
@@ -1611,6 +1609,32 @@ local _armaInputConn   = nil
 local _armaLoopTask    = nil
 local _armaUltimoTiro  = 0
 local _armaKillCd      = 0
+local _armaConvertendo = false   -- 🔒 lock anti-loop
+
+local ATTR_ORIGINAL = "BG_AccessoryOriginal"
+
+local function _armaMarcarOriginais()
+    local char = plr.Character
+    if not char then return end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:IsA("Accessory") then
+            v:SetAttribute(ATTR_ORIGINAL, true)
+        end
+    end
+end
+
+local function _armaAcharAccessory()
+    local char = plr.Character
+    if not char then return nil, nil end
+    -- só aceita acessório SEM o atributo (ou seja, o novo, da arma)
+    for _, v in ipairs(char:GetChildren()) do
+        if v:IsA("Accessory") and not v:GetAttribute(ATTR_ORIGINAL) then
+            local h = v:FindFirstChild("Handle")
+            if h then return h, v end
+        end
+    end
+    return nil, nil
+end
 
 local function _armaPegarBraco()
     local char = plr.Character
@@ -1622,19 +1646,6 @@ local function _armaPegarBraco()
         or char:FindFirstChild("UpperTorso")
 end
 
-local function _armaAcharAccessory()
-    local char = plr.Character
-    if not char then return nil, nil end
-    for _, v in ipairs(char:GetChildren()) do
-        if v:IsA("Accessory") then
-            local h = v:FindFirstChild("Handle")
-            if h then return h, v end
-        end
-    end
-    return nil, nil
-end
-
--- converte o Accessory em parte solta (server-side)
 local function _armaConverterParaParte(h, acc)
     local se = getFork3XEndpoint()
     if not h or not se then return nil end
@@ -1673,6 +1684,9 @@ local function _armaConverterParaParte(h, acc)
         se:InvokeServer("SyncResize", {{Part = newPart, CFrame = cf, Size = size * ARMA_HANDLE_SCALE}})
     end
 
+    -- 🔒 espera a parte replicar pro cliente antes de liberar
+    task.wait(0.5)
+
     return newPart
 end
 
@@ -1707,13 +1721,12 @@ function BG.ligarArmaCustom()
     end
     _armaAtiva = true
 
-    -- limpa qualquer acessório antigo antes
-    pcall(function() cmdHD(";unhat me") end)
-    task.wait(0.4)
+    -- 🏷️ marca todos os acessórios atuais (cabelo, chapéu…) como originais
+    _armaMarcarOriginais()
 
     cmdHD(";hat me " .. ARMA_ACCESSORY_ID)
     notifyInfo("Equipando arma...")
-    task.wait(1.2)
+    task.wait(1.5)
 
     local h, acc = _armaAcharAccessory()
     if not h then
@@ -1745,18 +1758,23 @@ function BG.ligarArmaCustom()
         while _armaAtiva do
             RS.Heartbeat:Wait()
 
-            -- re-encontra se o handle sumiu
+            -- 🔧 re-conversão protegida por lock
             if not _armaHandle or not _armaHandle.Parent then
+                if _armaConvertendo then continue end
+                _armaConvertendo = true
+
                 local h2, acc2 = _armaAcharAccessory()
                 if not h2 then
                     cmdHD(";hat me " .. ARMA_ACCESSORY_ID)
-                    task.wait(1.2)
+                    task.wait(1.5)
                     h2, acc2 = _armaAcharAccessory()
                 end
                 if h2 then
                     _armaHandle = _armaConverterParaParte(h2, acc2)
                     _armaUltimaCF = nil
                 end
+
+                _armaConvertendo = false
                 continue
             end
 
@@ -1816,7 +1834,7 @@ function BG.ligarArmaCustom()
         end
     end)
 
-    notifySucesso("Arma Custom ligada (server-side)")
+    notifySucesso("Arma Custom ligada")
 end
 
 function BG.desligarArmaCustom()
@@ -1829,14 +1847,15 @@ function BG.desligarArmaCustom()
         pcall(function() se:InvokeServer("Remove", {_armaHandle}) end)
     end
 
-    -- unhat de segurança (remove qualquer Accessory que tenha sobrado)
-    pcall(function() cmdHD(";unhat me") end)
+    -- 🧹 clearHats (remove qualquer Accessory que tenha sobrado)
+    pcall(function() cmdHD(";clearHats me") end)
 
     _armaHandle    = nil
     _armaUltimaCF  = nil
     _armaHum       = nil
     _armaTrack     = nil
     _armaUltimoTiro = 0
+    _armaConvertendo = false
 
     if _armaInputConn then _armaInputConn:Disconnect() _armaInputConn = nil end
     if _armaLoopTask then pcall(function() task.cancel(_armaLoopTask) end) _armaLoopTask = nil end
@@ -1844,16 +1863,14 @@ function BG.desligarArmaCustom()
     notifyInfo("Arma Custom desligada")
 end
 
--- 🎯 ajusta rotação em tempo real (com a arma ligada)
 function BG.ajustarRotacaoArma(rx, ry, rz)
     ARMA_ROT_X = rx or ARMA_ROT_X
     ARMA_ROT_Y = ry or ARMA_ROT_Y
     ARMA_ROT_Z = rz or ARMA_ROT_Z
-    _armaUltimaCF = nil  -- força próximo SyncMove
+    _armaUltimaCF = nil
     notifyInfo(string.format("Rotação: X=%d Y=%d Z=%d", ARMA_ROT_X, ARMA_ROT_Y, ARMA_ROT_Z))
 end
 
--- 🎯 ajusta offset de posição (studs relativos ao braço)
 function BG.ajustarOffsetArma(x, y, z)
     ARMA_OFFSET_POS = Vector3.new(x or 0, y or 0, z or 0)
     _armaUltimaCF = nil
