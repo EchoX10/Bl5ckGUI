@@ -1583,7 +1583,7 @@ function BG.botaoMensagemTroll()
 end
 
 -- ============================================================
--- ARMA CUSTOM (server-side via F3X) — sem hitbox física
+-- ARMA CUSTOM (server-side: posição + rotação via SyncMove)
 -- ============================================================
 local ARMA_ACCESSORY_ID = "117306365653785"
 local ARMA_ANIM_ID      = "rbxassetid://204295235"
@@ -1592,43 +1592,88 @@ local ARMA_HITBOX_SIZE  = Vector3.new(8, 8, 8)
 local ARMA_KILL_CD      = 0.5
 local ARMA_ATTACK_WIN   = 2
 
-local _armaAtiva      = false
-local _armaHandle     = nil
-local _armaTrack      = nil
-local _armaInputConn  = nil
-local _armaLoopTask   = nil
-local _armaUltimoTiro = 0
-local _armaKillCd     = 0
+-- 🎯 rotação em GRAUS
+local ARMA_ROT_X = 0
+local ARMA_ROT_Y = -50
+local ARMA_ROT_Z = 80
+-- offset relativo ao braço
+local ARMA_OFFSET_POS = Vector3.new(0, -1, 0)
+-- otimização: só manda SyncMove se mudou o suficiente
+local ARMA_MOVE_POS_EPS = 0.05
+local ARMA_MOVE_ROT_EPS = 0.02
 
-local function _armaAcharHandle()
+local _armaAtiva       = false
+local _armaHandle      = nil
+local _armaUltimaCF    = nil
+local _armaHum         = nil
+local _armaTrack       = nil
+local _armaInputConn   = nil
+local _armaLoopTask    = nil
+local _armaUltimoTiro  = 0
+local _armaKillCd      = 0
+
+local function _armaPegarBraco()
     local char = plr.Character
     if not char then return nil end
-    local h = nil
-    for _, v in ipairs(char:GetChildren()) do
-        if v:IsA("Accessory") then
-            local hh = v:FindFirstChild("Handle")
-            if hh then h = hh end
-        end
-    end
-    return h
+    return char:FindFirstChild("Right Arm")
+        or char:FindFirstChild("RightHand")
+        or char:FindFirstChild("RightUpperArm")
+        or char:FindFirstChild("Torso")
+        or char:FindFirstChild("UpperTorso")
 end
 
-local function _armaAumentarServerSide(h)
+local function _armaAcharAccessory()
+    local char = plr.Character
+    if not char then return nil, nil end
+    for _, v in ipairs(char:GetChildren()) do
+        if v:IsA("Accessory") then
+            local h = v:FindFirstChild("Handle")
+            if h then return h, v end
+        end
+    end
+    return nil, nil
+end
+
+-- converte o Accessory em parte solta (server-side)
+local function _armaConverterParaParte(h, acc)
     local se = getFork3XEndpoint()
-    if not h or not se then return end
-    local mesh = h:FindFirstChildOfClass("SpecialMesh")
-    if mesh then
+    if not h or not se then return nil end
+
+    local meshId, textureId, meshScale = "", "", Vector3.new(1,1,1)
+    local sm = h:FindFirstChildOfClass("SpecialMesh")
+    if sm then
+        meshId    = sm.MeshId or ""
+        textureId = sm.TextureId or ""
+        meshScale = sm.Scale or Vector3.new(1,1,1)
+    end
+
+    local cf, size = h.CFrame, h.Size
+
+    se:InvokeServer("Remove", {h})
+    if acc and acc.Parent then pcall(function() acc:Destroy() end) end
+
+    local newPart = se:InvokeServer("CreatePart", "Normal", cf, workspace)
+    if not newPart then return nil end
+
+    se:InvokeServer("SyncMaterial",  {{Part = newPart, Transparency = 0}})
+    se:InvokeServer("SyncCollision", {{Part = newPart, CanCollide = false}})
+    se:InvokeServer("SyncAnchor",    {{Part = newPart, Anchored = false}})
+
+    if meshId ~= "" then
+        se:InvokeServer("SyncResize", {{Part = newPart, CFrame = cf, Size = size}})
+        se:InvokeServer("CreateMeshes", {{Part = newPart}})
+        task.wait(0.1)
         se:InvokeServer("SyncMesh", {{
-            Part  = h,
-            Scale = mesh.Scale * ARMA_HANDLE_SCALE
+            Part = newPart,
+            MeshId = meshId,
+            TextureId = textureId,
+            Scale = meshScale * ARMA_HANDLE_SCALE
         }})
     else
-        se:InvokeServer("SyncResize", {{
-            Part   = h,
-            CFrame = h.CFrame,
-            Size   = h.Size * ARMA_HANDLE_SCALE
-        }})
+        se:InvokeServer("SyncResize", {{Part = newPart, CFrame = cf, Size = size * ARMA_HANDLE_SCALE}})
     end
+
+    return newPart
 end
 
 local function _armaTocarAnim()
@@ -1636,8 +1681,8 @@ local function _armaTocarAnim()
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
-    if not _armaTrack or _armaTrack.Animation.AnimationId ~= ARMA_ANIM_ID then
-        if _armaTrack then _armaTrack:Stop() end
+    if _armaHum ~= hum or not _armaTrack then
+        _armaHum = hum
         local a = Instance.new("Animation")
         a.AnimationId = ARMA_ANIM_ID
         _armaTrack = hum:LoadAnimation(a)
@@ -1662,21 +1707,29 @@ function BG.ligarArmaCustom()
     end
     _armaAtiva = true
 
+    -- limpa qualquer acessório antigo antes
+    pcall(function() cmdHD(";unhat me") end)
+    task.wait(0.4)
+
     cmdHD(";hat me " .. ARMA_ACCESSORY_ID)
     notifyInfo("Equipando arma...")
-
     task.wait(1.2)
 
-    _armaHandle = _armaAcharHandle()
-    if not _armaHandle then
-        notifyErro("Handle não encontrado")
+    local h, acc = _armaAcharAccessory()
+    if not h then
+        notifyErro("Acessório não apareceu")
         _armaAtiva = false
         return
     end
 
-    _armaAumentarServerSide(_armaHandle)
+    _armaHandle = _armaConverterParaParte(h, acc)
+    if not _armaHandle then
+        notifyErro("Falha ao converter acessório")
+        _armaAtiva = false
+        return
+    end
+    _armaUltimaCF = nil
 
-    -- toque na tela → animação
     if _armaInputConn then _armaInputConn:Disconnect() end
     _armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
         if gp then return end
@@ -1686,20 +1739,59 @@ function BG.ligarArmaCustom()
         end
     end)
 
-    -- loop de detecção (segue o handle, sempre)
     if _armaLoopTask then pcall(function() task.cancel(_armaLoopTask) end) end
     _armaLoopTask = task.spawn(function()
         local RS = game:GetService("RunService")
         while _armaAtiva do
             RS.Heartbeat:Wait()
+
+            -- re-encontra se o handle sumiu
             if not _armaHandle or not _armaHandle.Parent then
-                -- handle sumiu (respawn?), tenta achar de novo
-                _armaHandle = _armaAcharHandle()
-                if _armaHandle then _armaAumentarServerSide(_armaHandle) end
+                local h2, acc2 = _armaAcharAccessory()
+                if not h2 then
+                    cmdHD(";hat me " .. ARMA_ACCESSORY_ID)
+                    task.wait(1.2)
+                    h2, acc2 = _armaAcharAccessory()
+                end
+                if h2 then
+                    _armaHandle = _armaConverterParaParte(h2, acc2)
+                    _armaUltimaCF = nil
+                end
                 continue
             end
 
-            -- só detecta dentro da janela de ataque
+            -- 🎯 posição + rotação server-side (otimizado)
+            local arm = _armaPegarBraco()
+            if arm then
+                local target = arm.CFrame
+                    * CFrame.new(ARMA_OFFSET_POS)
+                    * CFrame.Angles(
+                        math.rad(ARMA_ROT_X),
+                        math.rad(ARMA_ROT_Y),
+                        math.rad(ARMA_ROT_Z)
+                    )
+
+                local precisaMover = true
+                if _armaUltimaCF then
+                    local dPos = (target.Position - _armaUltimaCF.Position).Magnitude
+                    local dRot = (target.LookVector - _armaUltimaCF.LookVector).Magnitude
+                    if dPos < ARMA_MOVE_POS_EPS and dRot < ARMA_MOVE_ROT_EPS then
+                        precisaMover = false
+                    end
+                end
+
+                if precisaMover then
+                    local se = getFork3XEndpoint()
+                    if se then
+                        pcall(function()
+                            se:InvokeServer("SyncMove", {{Part = _armaHandle, CFrame = target}})
+                        end)
+                        _armaUltimaCF = target
+                    end
+                end
+            end
+
+            -- detecção de hitbox
             if tick() - _armaUltimoTiro <= ARMA_ATTACK_WIN then
                 local params = OverlapParams.new()
                 local filtros = {}
@@ -1715,7 +1807,7 @@ function BG.ligarArmaCustom()
                         local hitPlr = Players:GetPlayerFromCharacter(model)
                         if hitPlr and hitPlr ~= plr then
                             _armaMatar(hitPlr.Name)
-                            _armaUltimoTiro = 0  -- reseta pra não matar 2x
+                            _armaUltimoTiro = 0
                             break
                         end
                     end
@@ -1731,13 +1823,41 @@ function BG.desligarArmaCustom()
     if not _armaAtiva then return end
     _armaAtiva = false
 
-    _armaHandle = nil
+    -- remove a parte solta no servidor
+    local se = getFork3XEndpoint()
+    if se and _armaHandle then
+        pcall(function() se:InvokeServer("Remove", {_armaHandle}) end)
+    end
+
+    -- unhat de segurança (remove qualquer Accessory que tenha sobrado)
+    pcall(function() cmdHD(";unhat me") end)
+
+    _armaHandle    = nil
+    _armaUltimaCF  = nil
+    _armaHum       = nil
+    _armaTrack     = nil
     _armaUltimoTiro = 0
 
-    if _armaTrack then _armaTrack:Stop() end
     if _armaInputConn then _armaInputConn:Disconnect() _armaInputConn = nil end
     if _armaLoopTask then pcall(function() task.cancel(_armaLoopTask) end) _armaLoopTask = nil end
+
     notifyInfo("Arma Custom desligada")
+end
+
+-- 🎯 ajusta rotação em tempo real (com a arma ligada)
+function BG.ajustarRotacaoArma(rx, ry, rz)
+    ARMA_ROT_X = rx or ARMA_ROT_X
+    ARMA_ROT_Y = ry or ARMA_ROT_Y
+    ARMA_ROT_Z = rz or ARMA_ROT_Z
+    _armaUltimaCF = nil  -- força próximo SyncMove
+    notifyInfo(string.format("Rotação: X=%d Y=%d Z=%d", ARMA_ROT_X, ARMA_ROT_Y, ARMA_ROT_Z))
+end
+
+-- 🎯 ajusta offset de posição (studs relativos ao braço)
+function BG.ajustarOffsetArma(x, y, z)
+    ARMA_OFFSET_POS = Vector3.new(x or 0, y or 0, z or 0)
+    _armaUltimaCF = nil
+    notifyInfo(string.format("Offset: X=%.2f Y=%.2f Z=%.2f", ARMA_OFFSET_POS.X, ARMA_OFFSET_POS.Y, ARMA_OFFSET_POS.Z))
 end
 
 print("[Jogador] Modulo carregado")
