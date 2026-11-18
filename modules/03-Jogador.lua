@@ -1583,7 +1583,7 @@ function BG.botaoMensagemTroll()
 end
 
 -- ============================================================
--- ARMA CUSTOM (server-side via F3X)
+-- ARMA CUSTOM (server-side via F3X) — sem hitbox física
 -- ============================================================
 local ARMA_ACCESSORY_ID = "117306365653785"
 local ARMA_ANIM_ID      = "rbxassetid://204295235"
@@ -1594,10 +1594,9 @@ local ARMA_ATTACK_WIN   = 2
 
 local _armaAtiva      = false
 local _armaHandle     = nil
-local _armaHitbox     = nil
 local _armaTrack      = nil
 local _armaInputConn  = nil
-local _armaTouchConn  = nil
+local _armaLoopTask   = nil
 local _armaUltimoTiro = 0
 local _armaKillCd     = 0
 
@@ -1630,19 +1629,6 @@ local function _armaAumentarServerSide(h)
             Size   = h.Size * ARMA_HANDLE_SCALE
         }})
     end
-end
-
-local function _armaCriarHitboxServerSide(h)
-    local se = getFork3XEndpoint()
-    if not h or not se then return end
-    local cf = h.CFrame
-    local box = se:InvokeServer("CreatePart", "Normal", cf, workspace)
-    if not box then return end
-    se:InvokeServer("SyncResize",    {{Part = box, CFrame = cf, Size = ARMA_HITBOX_SIZE}})
-    se:InvokeServer("SyncMaterial",  {{Part = box, Transparency = 1}})
-    se:InvokeServer("SyncCollision", {{Part = box, CanCollide = false}})
-    se:InvokeServer("CreateWelds", {h, box}, h)
-    return box
 end
 
 local function _armaTocarAnim()
@@ -1689,8 +1675,8 @@ function BG.ligarArmaCustom()
     end
 
     _armaAumentarServerSide(_armaHandle)
-    _armaHitbox = _armaCriarHitboxServerSide(_armaHandle)
 
+    -- toque na tela → animação
     if _armaInputConn then _armaInputConn:Disconnect() end
     _armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
         if gp then return end
@@ -1700,18 +1686,43 @@ function BG.ligarArmaCustom()
         end
     end)
 
-    if _armaTouchConn then _armaTouchConn:Disconnect() end
-    if _armaHitbox then
-        _armaTouchConn = _armaHitbox.Touched:Connect(function(hit)
-            if not _armaAtiva then return end
-            if tick() - _armaUltimoTiro > ARMA_ATTACK_WIN then return end
-            local hitChar = hit.Parent
-            if not hitChar then return end
-            local hitPlr = game.Players:GetPlayerFromCharacter(hitChar)
-            if not hitPlr or hitPlr == plr then return end
-            _armaMatar(hitPlr.Name)
-        end)
-    end
+    -- loop de detecção (segue o handle, sempre)
+    if _armaLoopTask then pcall(function() task.cancel(_armaLoopTask) end) end
+    _armaLoopTask = task.spawn(function()
+        local RS = game:GetService("RunService")
+        while _armaAtiva do
+            RS.Heartbeat:Wait()
+            if not _armaHandle or not _armaHandle.Parent then
+                -- handle sumiu (respawn?), tenta achar de novo
+                _armaHandle = _armaAcharHandle()
+                if _armaHandle then _armaAumentarServerSide(_armaHandle) end
+                continue
+            end
+
+            -- só detecta dentro da janela de ataque
+            if tick() - _armaUltimoTiro <= ARMA_ATTACK_WIN then
+                local params = OverlapParams.new()
+                local filtros = {}
+                if plr.Character then table.insert(filtros, plr.Character) end
+                if _armaHandle then table.insert(filtros, _armaHandle) end
+                params.FilterDescendantsInstances = filtros
+                params.FilterType = Enum.RaycastFilterType.Exclude
+
+                local hits = workspace:GetPartBoundsInBox(_armaHandle.CFrame, ARMA_HITBOX_SIZE, params)
+                for _, hit in ipairs(hits) do
+                    local model = hit:FindFirstAncestorOfClass("Model")
+                    if model then
+                        local hitPlr = Players:GetPlayerFromCharacter(model)
+                        if hitPlr and hitPlr ~= plr then
+                            _armaMatar(hitPlr.Name)
+                            _armaUltimoTiro = 0  -- reseta pra não matar 2x
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end)
 
     notifySucesso("Arma Custom ligada (server-side)")
 end
@@ -1720,17 +1731,12 @@ function BG.desligarArmaCustom()
     if not _armaAtiva then return end
     _armaAtiva = false
 
-    if _armaHitbox then
-        local se = getFork3XEndpoint()
-        if se then se:InvokeServer("Remove", {_armaHitbox}) end
-    end
-    _armaHitbox = nil
     _armaHandle = nil
     _armaUltimoTiro = 0
 
     if _armaTrack then _armaTrack:Stop() end
     if _armaInputConn then _armaInputConn:Disconnect() _armaInputConn = nil end
-    if _armaTouchConn then _armaTouchConn:Disconnect() _armaTouchConn = nil end
+    if _armaLoopTask then pcall(function() task.cancel(_armaLoopTask) end) _armaLoopTask = nil end
     notifyInfo("Arma Custom desligada")
 end
 
