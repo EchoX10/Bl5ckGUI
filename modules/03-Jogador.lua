@@ -1583,7 +1583,7 @@ function BG.botaoMensagemTroll()
 end
 
 -- ============================================================
--- ARMA CUSTOM (weld server-side, sem SyncMove per-frame)
+-- ARMA CUSTOM (weld server-side, conversão instantânea)
 -- ============================================================
 local ARMA_ACCESSORY_ID = "117306365653785"
 local ARMA_ANIM_ID      = "rbxassetid://204295235"
@@ -1592,7 +1592,6 @@ local ARMA_HITBOX_SIZE  = Vector3.new(8, 8, 8)
 local ARMA_KILL_CD      = 0.5
 local ARMA_ATTACK_WIN   = 2
 
--- 🎯 rotação em GRAUS e offset relativo ao braço
 local ARMA_ROT_X = 0
 local ARMA_ROT_Y = 180
 local ARMA_ROT_Z = 0
@@ -1618,7 +1617,18 @@ local function _armaPegarBraco()
         or char:FindFirstChild("UpperTorso")
 end
 
--- snapshot pra saber qual Accessory é o novo (o da arma)
+local function _armaCalcTarget()
+    local arm = _armaPegarBraco()
+    if not arm then return nil end
+    return arm.CFrame
+        * CFrame.new(ARMA_OFFSET_POS)
+        * CFrame.Angles(
+            math.rad(ARMA_ROT_X),
+            math.rad(ARMA_ROT_Y),
+            math.rad(ARMA_ROT_Z)
+        )
+end
+
 local function _armaSnapshot()
     local char = plr.Character
     if not char then return {} end
@@ -1644,26 +1654,16 @@ end
 local function _armaEquiparNovo()
     local snap = _armaSnapshot()
     cmdHD(";hat me " .. ARMA_ACCESSORY_ID)
-    task.wait(1.5)
+    task.wait(1.5)  -- única espera inevitável (HD Admin)
     return _armaEncontrarNovo(snap)
 end
 
-local function _armaCalcTarget()
-    local arm = _armaPegarBraco()
-    if not arm then return nil end
-    return arm.CFrame
-        * CFrame.new(ARMA_OFFSET_POS)
-        * CFrame.Angles(
-            math.rad(ARMA_ROT_X),
-            math.rad(ARMA_ROT_Y),
-            math.rad(ARMA_ROT_Z)
-        )
-end
-
-local function _armaConverterParaParte(h, acc)
+-- 🚀 conversão SEM waits (InvokeServer é síncrono)
+local function _armaConverterInstant(h, acc)
     local se = getFork3XEndpoint()
     if not h or not se then return nil end
 
+    -- 1) pega TUDO do acessório ANTES de deletar
     local meshId, textureId, meshScale = "", "", Vector3.new(1,1,1)
     local sm = h:FindFirstChildOfClass("SpecialMesh")
     if sm then
@@ -1671,56 +1671,47 @@ local function _armaConverterParaParte(h, acc)
         textureId = sm.TextureId or ""
         meshScale = sm.Scale or Vector3.new(1,1,1)
     end
+    local size = h.Size
 
-    local cf, size = h.CFrame, h.Size
+    -- 2) target já calculado (braço atual)
+    local target = _armaCalcTarget() or h.CFrame
+    local arm = _armaPegarBraco()
+
+    -- 3) remove acessório original
     se:InvokeServer("Remove", {h})
     if acc and acc.Parent then pcall(function() acc:Destroy() end) end
 
-    local newPart = se:InvokeServer("CreatePart", "Normal", cf, workspace)
+    -- 4) cria a parte JÁ no target (F3X cria ancorada por padrão)
+    local newPart = se:InvokeServer("CreatePart", "Normal", target, workspace)
     if not newPart then return nil end
 
-    se:InvokeServer("SyncMaterial",  {{Part = newPart, Transparency = 0}})
-    se:InvokeServer("SyncCollision", {{Part = newPart, CanCollide = false}})
-    -- mantém ancorada por enquanto
-
-    if meshId ~= "" then
-        se:InvokeServer("SyncResize", {{Part = newPart, CFrame = cf, Size = size}})
-        se:InvokeServer("CreateMeshes", {{Part = newPart}})
-        task.wait(0.1)
-        se:InvokeServer("SyncMesh", {{
-            Part = newPart,
-            MeshId = meshId,
-            TextureId = textureId,
-            Scale = meshScale * ARMA_HANDLE_SCALE
-        }})
-    else
-        se:InvokeServer("SyncResize", {{Part = newPart, CFrame = cf, Size = size * ARMA_HANDLE_SCALE}})
+    -- 5) solda no braço (ainda ancorada)
+    if arm then
+        pcall(function() se:InvokeServer("CreateWelds", {newPart, arm}, arm) end)
     end
 
-    task.wait(0.3)
+    -- 6) configura pra parecer com o acessório (tudo em rajada)
+    se:InvokeServer("SyncAnchor",    {{Part = newPart, Anchored = true}})
+    se:InvokeServer("SyncCollision", {{Part = newPart, CanCollide = false}})
+
+    if meshId ~= "" then
+        se:InvokeServer("SyncResize",   {{Part = newPart, CFrame = target, Size = size}})
+        se:InvokeServer("CreateMeshes", {{Part = newPart}})
+        se:InvokeServer("SyncMesh", {{
+            Part      = newPart,
+            MeshId    = meshId,
+            TextureId = textureId,
+            Scale     = meshScale * ARMA_HANDLE_SCALE
+        }})
+    else
+        se:InvokeServer("SyncResize", {{Part = newPart, CFrame = target, Size = size * ARMA_HANDLE_SCALE}})
+    end
+    se:InvokeServer("SyncMaterial", {{Part = newPart, Transparency = 0}})
+
+    -- 7) desancora (weld mantém no lugar)
+    se:InvokeServer("SyncAnchor", {{Part = newPart, Anchored = false}})
+
     return newPart
-end
-
--- 🔧 solda a parte no braço (rotação + posição vêm daqui)
-local function _armaWelarNoBraco()
-    if not _armaHandle or not _armaHandle.Parent then return end
-    local se = getFork3XEndpoint()
-    if not se then return end
-    local arm = _armaPegarBraco()
-    if not arm then return end
-    local target = _armaCalcTarget()
-    if not target then return end
-
-    -- ancora → move → solda → desancora (ordem importa)
-    se:InvokeServer("SyncAnchor", {{Part = _armaHandle, Anchored = true}})
-    task.wait(0.05)
-    se:InvokeServer("SyncMove", {{Part = _armaHandle, CFrame = target}})
-    task.wait(0.1)
-    pcall(function()
-        se:InvokeServer("CreateWelds", {_armaHandle, arm}, arm)
-    end)
-    task.wait(0.1)
-    se:InvokeServer("SyncAnchor", {{Part = _armaHandle, Anchored = false}})
 end
 
 local function _armaTemWeld()
@@ -1731,19 +1722,18 @@ local function _armaTemWeld()
     return false
 end
 
-local function _armaRemoverWelds()
+local function _armaReSoldar()
     if not _armaHandle or not _armaHandle.Parent then return end
     local se = getFork3XEndpoint()
     if not se then return end
-    local welds = {}
-    for _, v in ipairs(_armaHandle:GetChildren()) do
-        if v:IsA("Weld") or v:IsA("WeldConstraint") then
-            table.insert(welds, v)
-        end
-    end
-    if #welds > 0 then
-        pcall(function() se:InvokeServer("RemoveWelds", welds) end)
-    end
+    local arm = _armaPegarBraco()
+    local target = _armaCalcTarget()
+    if not arm or not target then return end
+
+    se:InvokeServer("SyncAnchor", {{Part = _armaHandle, Anchored = true}})
+    se:InvokeServer("SyncMove",   {{Part = _armaHandle, CFrame = target}})
+    pcall(function() se:InvokeServer("CreateWelds", {_armaHandle, arm}, arm) end)
+    se:InvokeServer("SyncAnchor", {{Part = _armaHandle, Anchored = false}})
 end
 
 local function _armaTocarAnim()
@@ -1785,14 +1775,12 @@ function BG.ligarArmaCustom()
         return
     end
 
-    _armaHandle = _armaConverterParaParte(h, acc)
+    _armaHandle = _armaConverterInstant(h, acc)
     if not _armaHandle then
         notifyErro("Falha ao converter acessório")
         _armaAtiva = false
         return
     end
-
-    _armaWelarNoBraco()
 
     if _armaInputConn then _armaInputConn:Disconnect() end
     _armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
@@ -1809,24 +1797,23 @@ function BG.ligarArmaCustom()
         while _armaAtiva do
             RS.Heartbeat:Wait()
 
-            -- parte sumiu? recria e solda de novo
+            -- parte sumiu? re-cria (instantâneo)
             if not _armaHandle or not _armaHandle.Parent then
                 if _armaConvertendo then continue end
                 _armaConvertendo = true
                 local h2, acc2 = _armaEquiparNovo()
                 if h2 then
-                    _armaHandle = _armaConverterParaParte(h2, acc2)
-                    if _armaHandle then _armaWelarNoBraco() end
+                    _armaHandle = _armaConverterInstant(h2, acc2)
                 end
                 _armaConvertendo = false
                 continue
             end
 
-            -- weld quebrou (respawn, física)? re-solda
+            -- weld quebrou? re-solda (instantâneo)
             if not _armaTemWeld() then
                 if _armaConvertendo then continue end
                 _armaConvertendo = true
-                _armaWelarNoBraco()
+                _armaReSoldar()
                 _armaConvertendo = false
                 continue
             end
@@ -1887,9 +1874,7 @@ function BG.ajustarRotacaoArma(rx, ry, rz)
     ARMA_ROT_Y = ry or ARMA_ROT_Y
     ARMA_ROT_Z = rz or ARMA_ROT_Z
     if _armaHandle and _armaHandle.Parent then
-        _armaRemoverWelds()
-        task.wait(0.05)
-        _armaWelarNoBraco()
+        _armaReSoldar()
     end
     notifyInfo(string.format("Rotação: X=%d Y=%d Z=%d", ARMA_ROT_X, ARMA_ROT_Y, ARMA_ROT_Z))
 end
@@ -1897,9 +1882,7 @@ end
 function BG.ajustarOffsetArma(x, y, z)
     ARMA_OFFSET_POS = Vector3.new(x or 0, y or 0, z or 0)
     if _armaHandle and _armaHandle.Parent then
-        _armaRemoverWelds()
-        task.wait(0.05)
-        _armaWelarNoBraco()
+        _armaReSoldar()
     end
     notifyInfo(string.format("Offset: X=%.2f Y=%.2f Z=%.2f", ARMA_OFFSET_POS.X, ARMA_OFFSET_POS.Y, ARMA_OFFSET_POS.Z))
 end
