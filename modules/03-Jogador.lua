@@ -1067,22 +1067,21 @@ function BG.toggleReanimate(ativar)
                                     end
 
                                     if overrideRot then
-    local rx = math.rad(overrideRot.X or 0)
-    local ry = math.rad(overrideRot.Y or 0)
-    local rz = math.rad(overrideRot.Z or 0)
+                                        local rx = math.rad(overrideRot.X or 0)
+                                        local ry = math.rad(overrideRot.Y or 0)
+                                        local rz = math.rad(overrideRot.Z or 0)
 
-    -- yaw do player (so esquerda/direita, sem pitch/roll)
-    local yaw = 0
-    local hrpReal = charAtual:FindFirstChild("HumanoidRootPart")
-    if hrpReal then
-        local look = hrpReal.CFrame.LookVector
-        yaw = math.atan2(look.X, look.Z)
-    end
+                                        local yaw = 0
+                                        local hrpReal = charAtual:FindFirstChild("HumanoidRootPart")
+                                        if hrpReal then
+                                            local look = hrpReal.CFrame.LookVector
+                                            yaw = math.atan2(look.X, look.Z)
+                                        end
 
-    cFrameFinal = CFrame.new(cFrameFinal.Position)
-        * CFrame.Angles(0, yaw, 0)
-        * CFrame.fromEulerAnglesXYZ(rx, ry, rz)
-end
+                                        cFrameFinal = CFrame.new(cFrameFinal.Position)
+                                            * CFrame.Angles(0, yaw, 0)
+                                            * CFrame.fromEulerAnglesXYZ(rx, ry, rz)
+                                    end
 
                                     if (fakePart.Position - cFrameFinal.Position).Magnitude > 50 then
                                         fakePart.CFrame = cFrameFinal
@@ -1148,6 +1147,7 @@ end
     end
 end
 
+-- ============== ARMA (projétil) ==============
 local function dispararArma()
     if not armaPart or not armaPart.Parent then return end
     if os.clock() - ultimoDisparo < 0.2 then return end
@@ -1158,7 +1158,6 @@ local function dispararArma()
 
     local projSize = Vector3.new(0.34, 0.1, 0.12)
 
-    -- direção: SEMPRE pra frente do FakeChar (horizontal)
     local dir = Vector3.new(0, 0, -1)
     local fakeTorso = fakeCharParts and fakeCharParts["Torso"]
     if fakeTorso and fakeTorso.Parent then
@@ -1264,13 +1263,13 @@ function BG.toggleArma(ativar)
         BG.PartCframe("Right Arm", "Position", Vector3.new(0, 0, 0))
 
         task.wait(0.3)
-        
+
         local armaSize = Vector3.new(1.8, 1.2, 0.2)
         local fakeRightArm = fakeCharParts["Right Arm"]
         local handCF = fakeRightArm.CFrame * CFrame.new(0, -fakeRightArm.Size.Y/2, 0)
         local handDir = fakeRightArm.CFrame.XVector
         local armaCF = CFrame.lookAt(handCF.Position, handCF.Position + handDir)
-        
+
         armaPart = F3X:CreatePart("Normal", armaCF, workspace)
         if not armaPart then
             notifyErro("Falha ao criar arma!")
@@ -1300,45 +1299,32 @@ function BG.toggleArma(ativar)
         end)
 
         armaTask = task.spawn(function()
-    local RS = game:GetService("RunService")
-    local ultimo = 0
-    local GUARD = 0.01
-    while armaAtiva and reanimateAtivo do
-        RS.Heartbeat:Wait()
-        local agora = os.clock()
-        if agora - ultimo >= GUARD then
-            ultimo = agora
-            local rightArm = fakeCharParts and fakeCharParts["Right Arm"]
-            local fakeTorso = fakeCharParts and fakeCharParts["Torso"]
-            if rightArm and rightArm.Parent and armaPart and armaPart.Parent then
-                -- posição: ponta do braço (mão)
-                local handCF = rightArm.CFrame * CFrame.new(0, -rightArm.Size.Y/2, 0)
-
-                -- direção: SEMPRE pra frente do FakeChar (horizontal)
-                local dir = Vector3.new(0, 0, -1)
-                if fakeTorso and fakeTorso.Parent then
-                    local fwd = fakeTorso.CFrame.LookVector
-                    local flat = Vector3.new(fwd.X, 0, fwd.Z)
-                    if flat.Magnitude > 0.01 then
-                        dir = flat.Unit
+            local RS = game:GetService("RunService")
+            local ultimo = 0
+            local GUARD = 0.01
+            while armaAtiva and reanimateAtivo do
+                RS.Heartbeat:Wait()
+                local agora = os.clock()
+                if agora - ultimo >= GUARD then
+                    ultimo = agora
+                    local rightArm = fakeCharParts and fakeCharParts["Right Arm"]
+                    local fakeTorso = fakeCharParts and fakeCharParts["Torso"]
+                    if rightArm and rightArm.Parent and armaPart and armaPart.Parent then
+                        local handCF = rightArm.CFrame * CFrame.new(0, -rightArm.Size.Y/2, 0)
+                        local dir = Vector3.new(0, 0, -1)
+                        if fakeTorso and fakeTorso.Parent then
+                            local fwd = fakeTorso.CFrame.LookVector
+                            local flat = Vector3.new(fwd.X, 0, fwd.Z)
+                            if flat.Magnitude > 0.01 then
+                                dir = flat.Unit
+                            end
+                        end
+                        local armaCF = CFrame.lookAt(handCF.Position, handCF.Position + dir)
+                        pcall(function() F3X:Move(armaPart, armaCF) end)
                     end
                 end
-
-                -- arma na mão apontando pra frente
-                local armaCF = CFrame.lookAt(handCF.Position, handCF.Position + dir)
-                pcall(function() F3X:Move(armaPart, armaCF) end)
             end
-        end
-    end
-end)
-                
-                -- arma na mão apontando pra frente
-                local armaCF = CFrame.lookAt(handCF.Position, handCF.Position + dir)
-                pcall(function() F3X:Move(armaPart, armaCF) end)
-            end
-        end
-    end
-end)
+        end)
 
         armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
             if gpe then return end
@@ -1492,7 +1478,6 @@ function BG.toggleJumpScare(ativar)
                     local hrpAnterior = jumpScareHRP[player.UserId]
                     local tempoCriacao = jumpScareLastCriacao[player.UserId] or 0
 
-                    -- 1) player morto ou sem HRP → remove part
                     if not hrp or (hum and hum.Health <= 0) then
                         if part then
                             removerPartJumpScare(player)
@@ -1500,7 +1485,6 @@ function BG.toggleJumpScare(ativar)
                         continue
                     end
 
-                    -- 2) part foi deletada por alguem → limpa referência e recria
                     if part and not part.Parent then
                         jumpScareParts[player.UserId] = nil
                         jumpScareHRP[player.UserId] = nil
@@ -1509,13 +1493,11 @@ function BG.toggleJumpScare(ativar)
                         continue
                     end
 
-                    -- 3) não tem part → cria
                     if not part then
                         criarPartJumpScare(player)
                         continue
                     end
 
-                    -- 4) HRP mudou (respawn) → remove antiga e recria
                     if hrp ~= hrpAnterior then
                         pcall(function() F3X:Remove(part) end)
                         jumpScareParts[player.UserId] = nil
@@ -1525,7 +1507,6 @@ function BG.toggleJumpScare(ativar)
                         continue
                     end
 
-                    -- 5) part existe mas não está seguindo (>10 studs por >0.5s) → recria
                     local tempoDesdeCriacao = tick() - tempoCriacao
                     local distancia = (part.Position - hrp.Position).Magnitude
                     if tempoDesdeCriacao > 0.5 and distancia > 10 then
@@ -1537,7 +1518,6 @@ function BG.toggleJumpScare(ativar)
                         continue
                     end
 
-                    -- 6) tudo ok, move
                     pcall(function() F3X:Move(part, hrp.CFrame) end)
                 end
 
@@ -1583,24 +1563,6 @@ function BG.toggleJumpScare(ativar)
     end
 end
 
-function BG.botaoMensagemTroll()
-    task.spawn(function()
-        notifyInfo("Enviando mensagem troll...")
-
-        cmdHD(";m Hi server!")
-
-        task.wait(5)
-
-        cmdHD(";mr  I  W I L L  B L O W  U P  T H I S  S E R V E R")
-
-        task.wait(1.5)
-
-        cmdHD(";mr BYE BYE!")
-
-        notifySucesso("Mensagem enviada!")
-    end)
-end
-
 -- ============== MENSAGEM TROLL ==============
 function BG.botaoMensagemTroll()
     task.spawn(function()
@@ -1626,7 +1588,7 @@ end
 local ARMA_ACCESSORY_ID = "117306365653785"
 local ARMA_ANIM_ID      = "rbxassetid://204295235"
 local ARMA_HANDLE_SCALE = 2.5
-local ARMA_HITBOX_SIZE  = Vector3.new(8, 8, 8)  -- hitbox server-side
+local ARMA_HITBOX_SIZE  = Vector3.new(8, 8, 8)
 local ARMA_KILL_CD      = 0.5
 local ARMA_ATTACK_WIN   = 2
 
@@ -1640,7 +1602,7 @@ local _armaUltimoTiro = 0
 local _armaKillCd     = 0
 
 local function _armaAcharHandle()
-    local char = game.Players.LocalPlayer.Character
+    local char = plr.Character
     if not char then return nil end
     local h = nil
     for _, v in ipairs(char:GetChildren()) do
@@ -1653,17 +1615,16 @@ local function _armaAcharHandle()
 end
 
 local function _armaAumentarServerSide(h)
-    if not h or not BG.se then return end
+    local se = getFork3XEndpoint()
+    if not h or not se then return end
     local mesh = h:FindFirstChildOfClass("SpecialMesh")
     if mesh then
-        -- aumenta o mesh no servidor
-        BG.se:InvokeServer("SyncMesh", {{
+        se:InvokeServer("SyncMesh", {{
             Part  = h,
             Scale = mesh.Scale * ARMA_HANDLE_SCALE
         }})
     else
-        -- sem mesh: aumenta o Size no servidor
-        BG.se:InvokeServer("SyncResize", {{
+        se:InvokeServer("SyncResize", {{
             Part   = h,
             CFrame = h.CFrame,
             Size   = h.Size * ARMA_HANDLE_SCALE
@@ -1672,21 +1633,20 @@ local function _armaAumentarServerSide(h)
 end
 
 local function _armaCriarHitboxServerSide(h)
-    if not h or not BG.se then return end
+    local se = getFork3XEndpoint()
+    if not h or not se then return end
     local cf = h.CFrame
-    local box = BG.se:InvokeServer("CreatePart", "Normal", cf, workspace)
+    local box = se:InvokeServer("CreatePart", "Normal", cf, workspace)
     if not box then return end
-    -- ajusta tamanho, transparência e colisão no servidor
-    BG.se:InvokeServer("SyncResize",    {{Part = box, CFrame = cf, Size = ARMA_HITBOX_SIZE}})
-    BG.se:InvokeServer("SyncMaterial",  {{Part = box, Transparency = 1}})
-    BG.se:InvokeServer("SyncCollision", {{Part = box, CanCollide = false}})
-    -- solda no handle (server-side)
-    BG.se:InvokeServer("CreateWelds", {h, box}, h)
+    se:InvokeServer("SyncResize",    {{Part = box, CFrame = cf, Size = ARMA_HITBOX_SIZE}})
+    se:InvokeServer("SyncMaterial",  {{Part = box, Transparency = 1}})
+    se:InvokeServer("SyncCollision", {{Part = box, CanCollide = false}})
+    se:InvokeServer("CreateWelds", {h, box}, h)
     return box
 end
 
 local function _armaTocarAnim()
-    local char = game.Players.LocalPlayer.Character
+    local char = plr.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
@@ -1704,37 +1664,33 @@ end
 local function _armaMatar(nome)
     if tick() - _armaKillCd < ARMA_KILL_CD then return end
     _armaKillCd = tick()
-    if BG.cmdHD then BG.cmdHD(";kill " .. nome) end  -- HD Admin = server-side
-    if BG.notificar then BG.notificar("Matou: " .. nome, "sucesso") end
+    cmdHD(";kill " .. nome)
+    notifySucesso("Matou: " .. nome)
 end
 
 function BG.ligarArmaCustom()
     if _armaAtiva then return end
-    if not BG.se then
-        if BG.notificar then BG.notificar("F3X não encontrado", "erro") end
+    if not getFork3XEndpoint() then
+        notifyErro("F3X não encontrado")
         return
     end
     _armaAtiva = true
 
-    if BG.cmdHD then BG.cmdHD(";hat me " .. ARMA_ACCESSORY_ID) end
-    if BG.notificar then BG.notificar("Equipando arma...", "info") end
+    cmdHD(";hat me " .. ARMA_ACCESSORY_ID)
+    notifyInfo("Equipando arma...")
 
-    task.wait(1.2) -- espera o acessório replicar do servidor
+    task.wait(1.2)
 
     _armaHandle = _armaAcharHandle()
     if not _armaHandle then
-        if BG.notificar then BG.notificar("Handle não encontrado", "erro") end
+        notifyErro("Handle não encontrado")
         _armaAtiva = false
         return
     end
 
-    -- 1) aumenta o handle NO SERVIDOR
     _armaAumentarServerSide(_armaHandle)
-
-    -- 2) cria hitbox invisível server-side, soldada no handle
     _armaHitbox = _armaCriarHitboxServerSide(_armaHandle)
 
-    -- 3) toque na tela -> animação (animação é sempre client)
     if _armaInputConn then _armaInputConn:Disconnect() end
     _armaInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
         if gp then return end
@@ -1744,7 +1700,6 @@ function BG.ligarArmaCustom()
         end
     end)
 
-    -- 4) encostou na hitbox durante o ataque -> ;kill (HD Admin server-side)
     if _armaTouchConn then _armaTouchConn:Disconnect() end
     if _armaHitbox then
         _armaTouchConn = _armaHitbox.Touched:Connect(function(hit)
@@ -1753,21 +1708,21 @@ function BG.ligarArmaCustom()
             local hitChar = hit.Parent
             if not hitChar then return end
             local hitPlr = game.Players:GetPlayerFromCharacter(hitChar)
-            if not hitPlr or hitPlr == game.Players.LocalPlayer then return end
+            if not hitPlr or hitPlr == plr then return end
             _armaMatar(hitPlr.Name)
         end)
     end
 
-    if BG.notificar then BG.notificar("Arma Custom ligada (server-side)", "sucesso") end
+    notifySucesso("Arma Custom ligada (server-side)")
 end
 
 function BG.desligarArmaCustom()
     if not _armaAtiva then return end
     _armaAtiva = false
 
-    -- remove hitbox do servidor
-    if _armaHitbox and BG.se then
-        BG.se:InvokeServer("Remove", {_armaHitbox})
+    if _armaHitbox then
+        local se = getFork3XEndpoint()
+        if se then se:InvokeServer("Remove", {_armaHitbox}) end
     end
     _armaHitbox = nil
     _armaHandle = nil
@@ -1776,7 +1731,7 @@ function BG.desligarArmaCustom()
     if _armaTrack then _armaTrack:Stop() end
     if _armaInputConn then _armaInputConn:Disconnect() _armaInputConn = nil end
     if _armaTouchConn then _armaTouchConn:Disconnect() _armaTouchConn = nil end
-    if BG.notificar then BG.notificar("Arma Custom desligada", "info") end
+    notifyInfo("Arma Custom desligada")
 end
 
 print("[Jogador] Modulo carregado")
