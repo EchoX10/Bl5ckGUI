@@ -246,7 +246,13 @@ local function criarToggle(texto, callback, parent)
             btn.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
             s.Color = Color3.fromRGB(35, 35, 35)
         end
-        pcall(callback, estado)
+        if callback then
+            local ok, err = pcall(callback, estado)
+            if not ok then
+                warn("[GUI] Erro no toggle '" .. texto .. "': " .. tostring(err))
+                if notifyErro then notifyErro("Erro: " .. tostring(err)) end
+            end
+        end
     end)
 end
 
@@ -271,26 +277,38 @@ local function criarBotao(texto, callback, parent)
         btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         task.wait(0.15)
         btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-        task.spawn(function() pcall(callback) end)
+        if callback then
+            task.spawn(function()
+                local ok, err = pcall(callback)
+                if not ok then
+                    warn("[GUI] Erro no botão '" .. texto .. "': " .. tostring(err))
+                    if notifyErro then notifyErro("Erro: " .. tostring(err)) end
+                end
+            end)
+        end
     end)
 end
 
 -- ABA 1: JOGADOR
 local tab1 = adicionarAba("Jogador", 1)
 criarToggle("Clone Personagem + Arma", function(e)
-    if e then BG.toggleClonePersonagem(true) else BG.toggleClonePersonagem(false) end
+    if BG.toggleClonePersonagem then
+        BG.toggleClonePersonagem(e)
+    else
+        notifyErro("Função não implementada ainda")
+    end
 end, tab1)
 criarToggle("Arma Custom", function(estado)
     if estado then
-        BG.ligarArmaCustom()
+        if BG.ligarArmaCustom then BG.ligarArmaCustom() end
     else
-        BG.desligarArmaCustom()
+        if BG.desligarArmaCustom then BG.desligarArmaCustom() end
     end
 end, tab1)
 criarBotao("Feminizar (R6)", BG.botaoFeminizar, tab1)
 criarBotao("Restaurar Aparência", BG.botaoRestaurarAparencia, tab1)
-criarToggle("Peitos (R6)", function(e) BG.toggleAcessorioFlutuante(e) end, tab1)
-criarToggle("Zumbi", function(e) BG.toggleZumbi(e) end, tab1)
+criarToggle("Peitos (R6)", function(e) if BG.toggleAcessorioFlutuante then BG.toggleAcessorioFlutuante(e) end end, tab1)
+criarToggle("Zumbi", function(e) if BG.toggleZumbi then BG.toggleZumbi(e) end end, tab1)
 criarBotao("Tool Invisible", BG.botaoCriarToolInvisible, tab1)
 criarBotao("Tool Hacker", BG.botaoCriarToolHacker, tab1)
 criarBotao("Modo Tóxico (Anti-Un)", BG.botaoModoToxico, tab1)
@@ -388,7 +406,15 @@ Instance.new("UICorner", musicToggleBtn).CornerRadius = UDim.new(0, 6)
 local musicEstado = false
 musicToggleBtn.MouseButton1Click:Connect(function()
     musicEstado = not musicEstado
-    if musicEstado then BG.ligarMusica() else BG.desligarMusica() end
+    if musicEstado then
+        BG.ligarMusica()
+        musicToggleBtn.Text = "Musica\n[ LIGADO ]"
+        musicToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 50, 20)
+    else
+        BG.desligarMusica()
+        musicToggleBtn.Text = "Musica\n[ DESLIGADO ]"
+        musicToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    end
 end)
 
 local presetBtn = Instance.new("TextButton")
@@ -410,6 +436,7 @@ local tab6 = adicionarAba("Transformation", 6)
 criarToggle("Reanimate (FakeChar)", function(e) BG.toggleReanimate(e) end, tab6)
 criarToggle("Arma (Precisa Reanimate)", function(e) BG.toggleArma(e) end, tab6)
 
+-- TextBox / SendBtn (aba ADMIN - declarados depois pra reaproveitar tab4)
 local msgBox = Instance.new("TextBox")
 msgBox.Size = UDim2.new(1, -4, 0, 42)
 msgBox.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -498,18 +525,16 @@ minBtn.MouseButton1Click:Connect(function()
     if minimizado then return end
     minimizado = true
 
-    -- esconde painel mas MANTÉM o size (só fica invisível)
     mainFrame.Visible = false
 
-    botaoRedondo.Position = UDim2.new(0, 20, 0, 20)
     botaoRedondo.Size = UDim2.new(0, 0, 0, 0)
     botaoRedondo.Visible = true
     TweenService:Create(botaoRedondo, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 50, 0, 50)
+        Size = UDim2.new(0, 50, 0, 50)
     }):Play()
 end)
 
-   closeBtn.MouseButton1Click:Connect(function()
+closeBtn.MouseButton1Click:Connect(function()
     pcall(function() BG.desligarMusica() end)
     pcall(function() BG.desligarHideGuis() end)
     pcall(function() BG.desligarLimpar() end)
@@ -530,7 +555,6 @@ botaoRedondo.MouseButton1Click:Connect(function()
     task.wait(0.35)
     botaoRedondo.Visible = false
 
-    -- restaura o painel do mesmo jeito que ele foi criado
     mainFrame.Visible = true
     mainFrame.Size = TAMANHO_PAINEL
     mainFrame.Position = POSICAO_PAINEL
@@ -539,7 +563,7 @@ end)
 
 selecionarAba(1)
 
--- Proteção anti-hide (só GUIs gerais, não força mainFrame.Visible)
+-- Proteção anti-hide
 task.spawn(function()
     while screenGui and screenGui.Parent do
         task.wait(0.3)
@@ -549,8 +573,8 @@ task.spawn(function()
     end
 end)
 
--- ============== TELA DE LOGIN (só depois do loading) ==============
-if not BG._temKey then
+-- ============== TELA DE LOGIN (só se 07-Key já tiver carregado) ==============
+if not BG._temKey and BG._gerarKey and BG._salvarKey then
     local keyAtual = BG._gerarKey()
     BG._keyAtual = keyAtual
     BG._salvarKey(keyAtual)
@@ -585,6 +609,19 @@ if not BG._temKey then
     tit.TextSize = 16
     tit.Parent = frame
     Instance.new("UICorner", tit).CornerRadius = UDim.new(0, 12)
+
+    -- botão de fechar a tela de login
+    local fecharLogin = Instance.new("TextButton")
+    fecharLogin.Size = UDim2.new(0, 28, 0, 28)
+    fecharLogin.Position = UDim2.new(1, -33, 0, 11)
+    fecharLogin.BackgroundColor3 = Color3.fromRGB(140, 30, 30)
+    fecharLogin.Text = "X"
+    fecharLogin.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fecharLogin.Font = Enum.Font.GothamBold
+    fecharLogin.TextSize = 12
+    fecharLogin.ZIndex = 5
+    fecharLogin.Parent = frame
+    Instance.new("UICorner", fecharLogin).CornerRadius = UDim.new(0, 6)
 
     local info = Instance.new("TextLabel")
     info.Size = UDim2.new(1, -40, 0, 50)
@@ -669,14 +706,36 @@ if not BG._temKey then
     end)
 
     verKey.MouseButton1Click:Connect(function()
-        BG._abrirJanelaMostrarKey(keyAtual)
+        if BG._abrirJanelaMostrarKey then
+            BG._abrirJanelaMostrarKey(keyAtual)
+        else
+            pcall(function() setclipboard(keyAtual) end)
+            notifyInfo("Sua key: " .. keyAtual)
+        end
     end)
 
     missoes.MouseButton1Click:Connect(function()
-        BG._abrirJanelaMissoes(keyAtual)
+        if BG._abrirJanelaMissoes then
+            BG._abrirJanelaMissoes(keyAtual)
+        else
+            notifyErro("Sistema de missões não carregado")
+        end
     end)
 
-    while not validado do task.wait(0.1) end
+    fecharLogin.MouseButton1Click:Connect(function()
+        loginGui:Destroy()
+        validado = true
+    end)
+
+    -- loop com timeout (30s) pra não travar o módulo
+    local timeout = 0
+    while not validado and timeout < 300 do
+        task.wait(0.1)
+        timeout = timeout + 1
+    end
+    if not validado then
+        pcall(function() loginGui:Destroy() end)
+    end
 end
 
 notifySucesso("BL5CK GUI carregada!")
